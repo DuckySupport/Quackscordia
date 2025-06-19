@@ -31,6 +31,7 @@ local function wrapOverwrites(parent, raw)
 		get = function(_, id)
 			for _, data in ipairs(raw) do
 				if data.id == id then
+					p("data.id == id true")
 					return PermissionOverwrite(parent, data)
 				end
 			end
@@ -148,11 +149,17 @@ function Member:hasPermission(channel, perm)
 	if channel then
 
 		local raw = self.parent.parent._api:getChannelPermissionOverwrites(channel.id)
-		local overwrites = wrapOverwrites(channel, raw)
+		p("not raw:", not raw)
+		local overwrites = raw and wrapOverwrites(channel, raw)
+		p("not overwrites", not overwrites)
 
+		p(self.id)
+		p("not overwrites:get(self.id)", not overwrites:get(self.id))
 		local overwrite = overwrites and overwrites:get(self.id)
+		p("not overwrite", not overwrite)
 		if overwrite then
 			if overwrite:getAllowedPermissions():has(n) then
+				p("overwrite:getAllowedPermissions():has(n) true")
 				return true
 			end
 			if overwrite:getDeniedPermissions():has(n) then
@@ -172,6 +179,7 @@ function Member:hasPermission(channel, perm)
 		end
 
 		if allow:has(n) then
+			p("allow:has(n) true")
 			return true
 		end
 		if deny:has(n) then
@@ -181,6 +189,7 @@ function Member:hasPermission(channel, perm)
 		local everyone = overwrites and overwrites:get(guild.id)
 		if everyone then
 			if everyone:getAllowedPermissions():has(n) then
+				p("everyone:getAllowedPermissions():has(n) true")
 				return true
 			end
 			if everyone:getDeniedPermissions():has(n) then
@@ -189,6 +198,8 @@ function Member:hasPermission(channel, perm)
 		end
 
 	end
+
+	p("Reached rolePermissions:has(n)", rolePermissions:has(n))
 
 	return rolePermissions:has(n)
 
