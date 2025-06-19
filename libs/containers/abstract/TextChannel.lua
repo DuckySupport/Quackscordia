@@ -174,6 +174,22 @@ function TextChannel:getPinnedMessages()
 	end
 end
 
+function TextChannel:bulkDelete(messages)
+	if not self.guild then return false, "cannot purge messages in DMs" end
+	messages = Resolver.messageIds(messages)
+	local data, err
+	if #messages == 1 then
+		data, err = self.client._api:deleteMessage(self._id, messages[1])
+	else
+		data, err = self.client._api:bulkDeleteMessages(self._id, {messages = messages})
+	end
+	if data then
+		return true
+	else
+		return false, err
+	end
+end
+
 --[=[
 @m broadcastTyping
 @t http
@@ -236,6 +252,9 @@ sent as the message content. If it is a table, more advanced formatting is
 allowed. See [[managing messages]] for more information.
 ]=]
 function TextChannel:send(content)
+                        
+    local originalContent = (type(content) == "table" and table.deepcopy(content or {})) or tostring(content)
+    local sentContent = nil
 
 	local data, err
 
@@ -317,6 +336,29 @@ function TextChannel:send(content)
 			sticker = {Resolver.stickerId(tbl.sticker)}
 		end
 
+		local poll
+		if tbl.poll then
+			poll = tbl.poll
+		end
+
+		local components
+		if tbl.components then
+			components = tbl.components
+		end
+                            
+        sentContent = {
+			content = content,
+			tts = tbl.tts,
+			nonce = tbl.nonce,
+			embeds = embeds,
+			message_reference = refMessage,
+			allowed_mentions = refMention,
+			sticker_ids = sticker,
+			flags = tbl.silent and 2^12 or nil,
+			poll = poll or nil,
+			components = components
+		}
+
 		data, err = self.client._api:createMessage(self._id, {
 			content = content,
 			tts = tbl.tts,
@@ -326,10 +368,13 @@ function TextChannel:send(content)
 			allowed_mentions = refMention,
 			sticker_ids = sticker,
 			flags = tbl.silent and 2^12 or nil,
+			poll = poll or nil,
+			components = components
 		}, files)
 
 	else
 
+        sentContent = {content = content}
 		data, err = self.client._api:createMessage(self._id, {content = content})
 
 	end
@@ -337,9 +382,33 @@ function TextChannel:send(content)
 	if data then
 		return self._messages:_insert(data)
 	else
+        p("TextChannel:send originalContent", originalContent)
+        p("sentContent", sentContent)
+        p("data", data)
+        p("err", err)
 		return nil, err
 	end
 
+end
+
+function TextChannel:success(content, emoji)
+	emoji = emoji or _G.emojis.success
+	return self:send({embed = {description = emoji .. " " .. content, color = _G.colors.success}})
+end
+
+function TextChannel:warning(content, emoji)
+	emoji = emoji or _G.emojis.warning
+	return self:send({embed = {description = emoji .. " " .. content, color = _G.colors.warning}})
+end
+
+function TextChannel:fail(content, emoji)
+	emoji = emoji or _G.emojis.fail
+	return self:send({embed = {description = emoji .. " " .. content, color = _G.colors.fail}})
+end
+
+function TextChannel:heavyred(content, emoji)
+	emoji = emoji or _G.emojis.fail
+	return self:send({embed = {description = emoji .. " " .. content, color = _G.colors.heavyred}})
 end
 
 --[=[

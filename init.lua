@@ -14,5 +14,6 @@ return {
 	Permissions = require('utils/Permissions'),
 	Stopwatch = require('utils/Stopwatch'),
 	Time = require('utils/Time'),
+	ArrayIterable = require("iterables/ArrayIterable"),
 	storage = {},
 }

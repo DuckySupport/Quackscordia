@@ -7,7 +7,6 @@ channels, and roles that represents one community.
 local Cache = require('iterables/Cache')
 local Role = require('containers/Role')
 local Emoji = require('containers/Emoji')
-local Sticker = require('containers/Sticker')
 local Invite = require('containers/Invite')
 local Webhook = require('containers/Webhook')
 local Ban = require('containers/Ban')
@@ -16,6 +15,8 @@ local Resolver = require('client/Resolver')
 local AuditLogEntry = require('containers/AuditLogEntry')
 local GuildTextChannel = require('containers/GuildTextChannel')
 local GuildVoiceChannel = require('containers/GuildVoiceChannel')
+local GuildForumChannel = require('containers/GuildForumChannel')
+local GuildThreadChannel = require('containers/GuildThreadChannel')
 local GuildCategoryChannel = require('containers/GuildCategoryChannel')
 local Snowflake = require('containers/abstract/Snowflake')
 
@@ -31,11 +32,11 @@ local Guild, get = require('class')('Guild', Snowflake)
 function Guild:__init(data, parent)
 	Snowflake.__init(self, data, parent)
 	self._roles = Cache({}, Role, self)
-	self._emojis = Cache({}, Emoji, self)
-	self._stickers = Cache({}, Sticker, self)
 	self._members = Cache({}, Member, self)
 	self._text_channels = Cache({}, GuildTextChannel, self)
 	self._voice_channels = Cache({}, GuildVoiceChannel, self)
+	self._forum_channels = Cache({}, GuildForumChannel, self)
+	self._thread_channels = Cache({}, GuildThreadChannel)
 	self._categories = Cache({}, GuildCategoryChannel, self)
 	self._voice_states = {}
 	if not data.unavailable then
@@ -57,8 +58,6 @@ end
 function Guild:_makeAvailable(data)
 
 	self._roles:_load(data.roles)
-	self._emojis:_load(data.emojis)
-	self._stickers:_load(data.stickers)
 	self:_loadMore(data)
 
 	if not data.channels then return end -- incomplete guild
@@ -70,6 +69,7 @@ function Guild:_makeAvailable(data)
 
 	local text_channels = self._text_channels
 	local voice_channels = self._voice_channels
+	local forum_channels = self._forum_channels
 	local categories = self._categories
 
 	for _, channel in ipairs(data.channels) do
@@ -78,10 +78,14 @@ function Guild:_makeAvailable(data)
 			text_channels:_insert(channel)
 		elseif t == channelType.voice then
 			voice_channels:_insert(channel)
+		elseif t == channelType.forum then
+			forum_channels:_insert(channel)
 		elseif t == channelType.category then
 			categories:_insert(channel)
 		end
 	end
+
+	self:_loadThreads(data)
 
 	return self:_loadMembers(data)
 
@@ -98,6 +102,17 @@ function Guild:_loadMembers(data)
 	end
 	if self._large and self.client._options.cacheAllMembers then
 		return self:requestMembers()
+	end
+end
+
+function Guild:_loadThreads(data)
+	if data.threads then
+		for _, thread in ipairs(data.threads) do
+			local parent = self:getChannel(thread.parent_id)
+			if parent then
+				parent._thread_channels:_insert(thread, parent)
+			end
+		end
 	end
 end
 
@@ -195,19 +210,12 @@ end
 ]=]
 function Guild:getEmoji(id)
 	id = Resolver.emojiId(id)
-	return self._emojis:get(id)
-end
-
---[=[
-@m getSticker
-@t mem
-@p id Sticker-ID-Resolvable
-@r Sticker
-@d Gets a sticker object by ID.
-]=]
-function Guild:getSticker(id)
-	id = Resolver.stickerId(id)
-	return self._stickers:get(id)
+	local data, err = self.client._api:getGuildEmoji(self._id, id)
+	if data then
+		return Emoji(data, self)
+	else
+		return nil, err
+	end
 end
 
 --[=[
@@ -219,7 +227,12 @@ end
 ]=]
 function Guild:getChannel(id)
 	id = Resolver.channelId(id)
-	return self._text_channels:get(id) or self._voice_channels:get(id) or self._categories:get(id)
+	return self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id)
+end
+
+function Guild:getCategory(id)
+	id = Resolver.channelId(id)
+	return self._categories:get(id)
 end
 
 --[=[
@@ -251,6 +264,23 @@ function Guild:createVoiceChannel(name)
 	local data, err = self.client._api:createGuildChannel(self._id, {name = name, type = channelType.voice})
 	if data then
 		return self._voice_channels:_insert(data)
+	else
+		return nil, err
+	end
+end
+
+--[=[
+@m createForumChannel
+@t http
+@p name string
+@r GuildForumChannel
+@d Creates a new forum channel in this guild. The name must be between 2 and 100
+characters in length.
+]=]
+function Guild:createForumChannel(name)
+	local data, err = self.client._api:createGuildChannel(self._id, {name = name, type = channelType.forum})
+	if data then
+		return self._forum_channels:_insert(data)
 	else
 		return nil, err
 	end
@@ -303,29 +333,7 @@ function Guild:createEmoji(name, image)
 	image = Resolver.base64(image)
 	local data, err = self.client._api:createGuildEmoji(self._id, {name = name, image = image})
 	if data then
-		return self._emojis:_insert(data)
-	else
-		return nil, err
-	end
-end
-
---[=[
-@m createSticker
-@t http
-@p name string
-@p description string
-@p tags string
-@p file Base64-Resolvable
-@r Sticker
-@d Creates a new sticker in this guild. The name must be between 2 and 30 characters. The description
-must be between 2 and 100 characters, and the tags must be between 2 and 200 characters. The file must
-be a PNG, APNG, or LOTTIE file, and must be under 500kb and 320x320 pixels.
-]=]
-function Guild:createSticker(name, description, tags, file)
-	file = Resolver.base64(file)
-	local data, err = self.client._api:createGuildSticker(self._id, {name = name, description = description, tags = tags, file = file})
-	if data then
-		return self._stickers:_insert(data)
+		return Emoji(data, self)
 	else
 		return nil, err
 	end
@@ -923,17 +931,6 @@ function get.roles(self)
 	return self._roles
 end
 
---[=[@p emojis Cache An iterable cache of all emojis that exist in this guild. Note that standard
-unicode emojis are not found here; only custom emojis.]=]
-function get.emojis(self)
-	return self._emojis
-end
-
---[=[@p stickers Cache An iterable cache of all stickers that exist in this guild.]=]
-function get.stickers(self)
-	return self._stickers
-end
-
 --[=[@p members Cache An iterable cache of all members that exist in this guild and have been
 already loaded. If the `cacheAllMembers` client option (and the `syncGuilds`
 option for user-accounts) is enabled on start-up, then all members will be
@@ -943,14 +940,48 @@ function get.members(self)
 	return self._members
 end
 
+--[=[@p onlineMembers Array An array of all members that are not offline in the guild and have been
+already loaded. It is recommended to enable `cacheAllMembers` on your Client before attempting to access this property.]=]
+function get.onlineMembers(self)
+	local online = {}
+	for _, member in pairs(self._members:toArray()) do
+		if member.status ~= "offline" then
+			table.insert(online, member)
+		end
+	end
+	return online
+end
+
+--[=[@p bots Array An array of all members that are bots in the guild and have been
+already loaded. It is recommended to enable `cacheAllMembers` on your Client before attempting to access this property.]=]
+function get.bots(self)
+	local bots = {}
+	for _, member in pairs(self._members:toArray()) do
+		if member.user.bot then
+			table.insert(bots, member)
+		end
+	end
+	return bots
+end
+
 --[=[@p textChannels Cache An iterable cache of all text channels that exist in this guild.]=]
 function get.textChannels(self)
 	return self._text_channels
 end
 
+--[=[@p forumChannels Cache An iterable cache of all forum channels that exist in this guild.]=]
+function get.forumChannels(self)
+	return self._forum_channels
+end
+
 --[=[@p voiceChannels Cache An iterable cache of all voice channels that exist in this guild.]=]
 function get.voiceChannels(self)
 	return self._voice_channels
+end
+
+--[=[@p threadChannels Cache An iterable cache of all active thread channels that exist in this guild.]=]
+function get.threadChannels(self)
+	return self._thread_channels
 end
 
 --[=[@p categories Cache An iterable cache of all channel categories that exist in this guild.]=]

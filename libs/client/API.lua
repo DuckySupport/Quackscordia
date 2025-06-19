@@ -255,6 +255,15 @@ function API:getChannel(channel_id) -- not exposed, use cache
 	return self:request("GET", endpoint)
 end
 
+function API:getChannelPermissionOverwrites(channel_id)
+    local data, err = self:getChannel(channel_id)
+    if data then
+        return data.permission_overwrites or {}
+    else
+        return nil, err
+    end
+end
+
 function API:modifyChannel(channel_id, payload) -- Channel:_modify
 	local endpoint = f(endpoints.CHANNEL, channel_id)
 	return self:request("PATCH", endpoint, payload)
@@ -743,6 +752,86 @@ end
 function API:getCurrentApplicationInformation() -- Client:run
 	local endpoint = endpoints.OAUTH2_APPLICATION_ME
 	return self:request("GET", endpoint)
+end
+
+function API:getThreadMember(channel_id, user_id)
+	local endpoint = f(endpoints.THREAD_MEMBER, channel_id, user_id)
+	return self:request("GET", endpoint)
+end
+
+function API:getThreadMembers(channel_id, query)
+	local endpoint = f(endpoints.THREAD_MEMBERS, channel_id)
+	return self:request("GET", endpoint, nil, query)
+end
+
+function API:addThreadMember(channel_id, user_id)
+	local endpoint = f(endpoints.THREAD_MEMBER, channel_id, user_id)
+	return self:request("PUT", endpoint)
+end
+
+function API:removeThreadMember(channel_id, user_id)
+	local endpoint = f(endpoints.THREAD_MEMBER, channel_id, user_id)
+	return self:request("DELETE", endpoint)
+end
+
+function API:getCurrentThreadMember(channel_id)
+	local endpoint = f(endpoints.THREAD_MEMBER, channel_id)
+	return self:request("GET", endpoint)
+end
+
+function API:joinThread(channel_id)
+	local endpoint = f(endpoints.THREAD_MEMBER_ME, channel_id)
+	return self:request("PUT", endpoint)
+end
+
+function API:leaveThread(channel_id)
+	local endpoint = f(endpoints.THREAD_MEMBER_ME, channel_id)
+	return self:request("DELETE", endpoint)
+end
+
+function API:startThreadWithMessage(channel_id, message_id, payload)
+	local endpoint = f(endpoints.THREAD_START, channel_id, message_id)
+	return self:request("POST", endpoint, payload)
+end
+
+function API:startThreadWithoutMessage(channel_id, payload)
+	local endpoint = f(endpoints.THREAD_START_WITHOUT_MESSAGE, channel_id)
+	return self:request("POST", endpoint, payload)
+end
+
+function API:listArchivedPublicThreads(channel_id, query)
+	local endpoint = f(endpoints.THREAD_ARCHIVED, channel_id)
+	return self:request("GET", endpoint, nil, query)
+end
+
+function API:listArchivedPrivateThreads(channel_id, query)
+	local endpoint = f(endpoints.THREAD_ARCHIVED_PRIVATE, channel_id)
+	return self:request("GET", endpoint, nil, query)
+end
+
+function API:listJoinedArchivedPrivateThreads(channel_id, query)
+	local endpoint = f(endpoints.THREAD_JOINED_ARCHIVED_PRIVATE, channel_id)
+	return self:request("GET", endpoint, nil, query)
+end
+
+function API:getForumTag(channel_id, tag_id)
+	local endpoint = f(endpoints.CHANNEL_TAG, channel_id, tag_id)
+	return self:request("GET", endpoint)
+end
+
+function API:createForumTag(channel_id, payload)
+	local endpoint = f(endpoints.CHANNEL_TAGS, channel_id)
+	return self:request("POST", endpoint, payload)
+end
+
+function API:modifyForumTag(channel_id, tag_id, payload)
+	local endpoint = f(endpoints.CHANNEL_TAG, channel_id, tag_id)
+	return self:request("PUT", endpoint, payload)
+end
+
+function API:deleteForumTag(channel_id, tag_id)
+	local endpoint = f(endpoints.CHANNEL_TAG, channel_id, tag_id)
+	return self:request("DELETE", endpoint)
 end
 
 -- end of auto-generated methods --

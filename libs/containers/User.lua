@@ -7,11 +7,18 @@ specific guild's context.
 local Snowflake = require('containers/abstract/Snowflake')
 local FilteredIterable = require('iterables/FilteredIterable')
 local constants = require('constants')
+local Resolver = require('client/Resolver')
 
 local format = string.format
+local insert = table.insert
 local DEFAULT_AVATARS = constants.DEFAULT_AVATARS
 
 local User, get = require('class')('User', Snowflake)
+local enums = require('enums')
+local bit = require('bit')
+local band = bit.band
+
+
 
 function User:__init(data, parent)
 	Snowflake.__init(self, data, parent)
@@ -58,6 +65,18 @@ function User:getDefaultAvatarURL(size)
 end
 
 --[=[
+@m hasBadge
+@t mem
+@p badge User-Flag-Resolvable
+@r boolean
+@d Indicates whether the user has the badge given.
+]=]
+function User:hasBadge(badge)
+	badge = Resolver.userFlag(badge)
+	return band(self._public_flags or 0, badge) == badge
+end
+
+--[=[
 @m getPrivateChannel
 @t http
 @r PrivateChannel
@@ -91,6 +110,41 @@ function User:send(content)
 	local channel, err = self:getPrivateChannel()
 	if channel then
 		return channel:send(content)
+	else
+		return nil, err
+	end
+end
+
+function User:success(content, emoji)
+	local channel, err = self:getPrivateChannel()
+	if channel then
+		return channel:success(content, emoji)
+	else
+		return nil, err
+	end
+end
+
+function User:warning(content, emoji)
+	local channel, err = self:getPrivateChannel()
+	if channel then
+		return channel:warning(content, emoji)
+	else
+		return nil, err
+	end
+end
+
+function User:fail(content, emoji)
+	local channel, err = self:getPrivateChannel()
+	if channel then
+		return channel:fail(content, emoji)
+	else
+		return nil, err
+	end
+end
+function User:heavyred(content, emoji)
+	local channel, err = self:getPrivateChannel()
+	if channel then
+		return channel:heavyred(content, emoji)
 	else
 		return nil, err
 	end
@@ -200,6 +254,20 @@ function get.mutualGuilds(self)
 		end)
 	end
 	return self._mutual_guilds
+end
+
+--[=[@p badges Array An array of all badges the user has, represented by the badge's name.]=]
+function get.badges(self)
+	local badges = {}
+	local publicflags = self._public_flags or 0
+
+	for badge, flag in pairs(enums.userFlag) do
+		if band(publicflags, flag) == flag then
+			insert(badges, badge)
+		end
+	end
+	
+	return badges
 end
 
 return User

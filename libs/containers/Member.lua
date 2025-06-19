@@ -14,15 +14,40 @@ local ArrayIterable = require('iterables/ArrayIterable')
 local Color = require('utils/Color')
 local Resolver = require('client/Resolver')
 local GuildChannel = require('containers/abstract/GuildChannel')
+local PermissionOverwrite = require('containers/PermissionOverwrite')
 local Permissions = require('utils/Permissions')
 local Date = require('utils/Date')
 local Time = require('utils/Time')
+local API = require("client/API")
 
 local insert, remove, sort = table.insert, table.remove, table.sort
 local isInstance = class.isInstance
 local permission = assert(enums.permission)
 
 local Member, get = class('Member', UserPresence)
+
+local function wrapOverwrites(parent, raw)
+	return {
+		get = function(_, id)
+			for _, data in ipairs(raw) do
+				if data.id == id then
+					return PermissionOverwrite(parent, data)
+				end
+			end
+		end,
+
+		iter = function(_)
+			local i = 0
+			return function()
+				i = i + 1
+				local data = raw[i]
+				if data then
+					return PermissionOverwrite(parent, data)
+				end
+			end
+		end
+	}
+end
 
 function Member:__init(data, parent)
 	UserPresence.__init(self, data, parent)
@@ -122,9 +147,10 @@ function Member:hasPermission(channel, perm)
 
 	if channel then
 
-		local overwrites = channel.permissionOverwrites
+		local raw = self.parent.parent._api:getChannelPermissionOverwrites(channel.id)
+		local overwrites = wrapOverwrites(channel, raw)
 
-		local overwrite = overwrites:get(self.id)
+		local overwrite = overwrites and overwrites:get(self.id)
 		if overwrite then
 			if overwrite:getAllowedPermissions():has(n) then
 				return true
@@ -152,7 +178,7 @@ function Member:hasPermission(channel, perm)
 			return false
 		end
 
-		local everyone = overwrites:get(guild.id)
+		local everyone = overwrites and overwrites:get(guild.id)
 		if everyone then
 			if everyone:getAllowedPermissions():has(n) then
 				return true
@@ -204,9 +230,10 @@ function Member:getPermissions(channel)
 
 	if channel then
 
-		local overwrites = channel.permissionOverwrites
+		local raw = self.parent.parent._api:getChannelPermissionOverwrites(channel.id)
+		local overwrites = wrapOverwrites(channel, raw)
 
-		local everyone = overwrites:get(guild.id)
+		local everyone = overwrites and overwrites:get(guild.id)
 		if everyone then
 			ret = everyone:getDeniedPermissions():complement(ret)
 			ret = ret:union(everyone:getAllowedPermissions())
@@ -215,7 +242,7 @@ function Member:getPermissions(channel)
 		local allow, deny = Permissions(), Permissions()
 		for role in self.roles:iter() do
 			if role.id ~= guild.id then -- just in case
-				local overwrite = overwrites:get(role.id)
+				local overwrite = overwrites and overwrites:get(role.id)
 				if overwrite then
 					deny = deny:union(overwrite:getDeniedPermissions())
 					allow = allow:union(overwrite:getAllowedPermissions())
@@ -225,7 +252,7 @@ function Member:getPermissions(channel)
 		ret = deny:complement(ret)
 		ret = ret:union(allow)
 
-		local overwrite = overwrites:get(self.id)
+		local overwrite = overwrites and overwrites:get(self.id)
 		if overwrite then
 			ret = overwrite:getDeniedPermissions():complement(ret)
 			ret = ret:union(overwrite:getAllowedPermissions())

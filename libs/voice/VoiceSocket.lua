@@ -2,7 +2,6 @@ local uv = require('uv')
 local class = require('class')
 local timer = require('timer')
 local enums = require('enums')
-local sodium = require('voice/sodium') or {}
 
 local WebSocket = require('client/WebSocket')
 
@@ -13,10 +12,7 @@ local wrap = coroutine.wrap
 local time = os.time
 local unpack, pack = string.unpack, string.pack -- luacheck: ignore
 
-local SUPPORTED_ENCRYPTION_MODES = { 'aead_xchacha20_poly1305_rtpsize' }
-if sodium.aead_aes256_gcm then -- AEAD AES256-GCM is only available if the hardware supports it
-	table.insert(SUPPORTED_ENCRYPTION_MODES, 1, 'aead_aes256_gcm_rtpsize')
-end
+local ENCRYPTION_MODE = 'xsalsa20_poly1305'
 
 local IDENTIFY        = 0
 local SELECT_PROTOCOL = 1
@@ -30,11 +26,9 @@ local HELLO           = 8
 local RESUMED         = 9
 
 local function checkMode(modes)
-	for _, ENCRYPTION_MODE in ipairs(SUPPORTED_ENCRYPTION_MODES) do
-		for _, mode in ipairs(modes) do
-			if mode == ENCRYPTION_MODE then
-				return mode
-			end
+	for _, mode in ipairs(modes) do
+		if mode == ENCRYPTION_MODE then
+			return mode
 		end
 	end
 end
@@ -55,7 +49,6 @@ function VoiceSocket:__init(state, connection, manager)
 	self._client = manager._client
 	self._connection = connection
 	self._session_id = state.session_id
-	self._seq_ack = -1
 end
 
 function VoiceSocket:handleDisconnect()
@@ -70,16 +63,12 @@ function VoiceSocket:handlePayload(payload)
 	local d = payload.d
 	local op = payload.op
 
-	if payload.seq then
-		self._seq_ack = payload.seq
-	end
-
 	self:debug('WebSocket OP %s', op)
 
 	if op == HELLO then
 
 		self:info('Received HELLO')
-		self:startHeartbeat(d.heartbeat_interval)
+		self:startHeartbeat(d.heartbeat_interval * 0.75) -- NOTE: hotfix for API bug
 		self:identify()
 
 	elseif op == READY then
@@ -87,7 +76,6 @@ function VoiceSocket:handlePayload(payload)
 		self:info('Received READY')
 		local mode = checkMode(d.modes)
 		if mode then
-			self:debug('Selected encryption mode %q', mode)
 			self._mode = mode
 			self._ssrc = d.ssrc
 			self:handshake(d.ip, d.port)
@@ -149,10 +137,7 @@ end
 
 function VoiceSocket:heartbeat()
 	self._sw:reset()
-	return self:_send(HEARTBEAT, {
-		t = time(),
-		seq_ack = self._seq_ack,
-	})
+	return self:_send(HEARTBEAT, time())
 end
 
 function VoiceSocket:identify()
@@ -171,7 +156,6 @@ function VoiceSocket:resume()
 		server_id = state.guild_id,
 		session_id = state.session_id,
 		token = state.token,
-		seq_ack = self._seq_ack,
 	})
 end
 

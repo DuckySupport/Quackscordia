@@ -38,6 +38,27 @@ function GuildCategoryChannel:createTextChannel(name)
 end
 
 --[=[
+@m createForumChannel
+@t http
+@p name string
+@r GuildForumChannel
+@d Creates a new GuildVoiceChannel with this category as it's parent. Similar to `Guild:createForumChannel(name)`
+]=]
+function GuildCategoryChannel:createForumChannel(name)
+	local guild = self._parent
+	local data, err = guild.client._api:createGuildChannel(guild._id, {
+		name = name,
+		type = channelType.forum,
+		parent_id = self._id
+	})
+	if data then
+		return guild._forum_channels:_insert(data)
+	else
+		return nil, err
+	end
+end
+
+--[=[
 @m createVoiceChannel
 @t http
 @p name string

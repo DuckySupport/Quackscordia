@@ -118,8 +118,6 @@ function Client:__init(options)
 	self._logger = Logger(options.logLevel, options.dateTime, options.logFile)
 	self._voice = VoiceManager(self)
 	self._role_map = {}
-	self._emoji_map = {}
-	self._sticker_map = {}
 	self._channel_map = {}
 	self._events = require('client/EventHandler')
 	self._intents = options.gatewayIntents
@@ -554,7 +552,11 @@ function Client:getChannel(id)
 	id = Resolver.channelId(id)
 	local guild = self._channel_map[id]
 	if guild then
-		return guild._text_channels:get(id) or guild._voice_channels:get(id) or guild._categories:get(id)
+		return guild._forum_channels:get(id)
+			or guild._text_channels:get(id)
+			or guild._voice_channels:get(id)
+			or guild._thread_channels:get(id)
+			or guild._categories:get(id)
 	else
 		return self._private_channels:get(id) or self._group_channels:get(id)
 	end
@@ -572,34 +574,6 @@ function Client:getRole(id)
 	id = Resolver.roleId(id)
 	local guild = self._role_map[id]
 	return guild and guild._roles:get(id)
-end
-
---[=[
-@m getEmoji
-@t mem
-@p id Emoji-ID-Resolvable
-@r Emoji
-@d Gets an emoji object by ID. The current user must be in the emoji's guild and
-the client must be running the appropriate shard that serves the emoji's guild.
-]=]
-function Client:getEmoji(id)
-	id = Resolver.emojiId(id)
-	local guild = self._emoji_map[id]
-	return guild and guild._emojis:get(id)
-end
-
---[=[
-@m getSticker
-@t mem
-@p id Sticker-ID-Resolvable
-@r Sticker
-@d Gets a sticker object by ID. The current user must be in the sticker's guild
-and the client must be running the appropriate shard that serves the sticker's guild.
-]=]
-function Client:getSticker(id)
-	id = Resolver.stickerId(id)
-	local guild = self._sticker_map[id]
-	return guild and guild._stickers:get(id)
 end
 
 --[=[

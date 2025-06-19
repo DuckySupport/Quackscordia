@@ -11,11 +11,13 @@ and milliseconds.
 local class = require('class')
 local constants = require('constants')
 
-local MS_PER_S    =               constants.MS_PER_S
-local MS_PER_MIN  = MS_PER_S    * constants.S_PER_MIN
-local MS_PER_HOUR = MS_PER_MIN  * constants.MIN_PER_HOUR
-local MS_PER_DAY  = MS_PER_HOUR * constants.HOUR_PER_DAY
-local MS_PER_WEEK = MS_PER_DAY  * constants.DAY_PER_WEEK
+local MS_PER_S   	 =               	constants.MS_PER_S
+local MS_PER_MIN  	= MS_PER_S    	* 	constants.S_PER_MIN
+local MS_PER_HOUR 	= MS_PER_MIN  	* 	constants.MIN_PER_HOUR
+local MS_PER_DAY  	= MS_PER_HOUR 	* 	constants.HOUR_PER_DAY
+local MS_PER_WEEK 	= MS_PER_DAY  	* 	constants.DAY_PER_WEEK
+local MS_PER_MONTH 	= MS_PER_DAY 	* 	constants.DAY_PER_MONTH
+local MS_PER_YEAR 	= MS_PER_DAY 	* 	constants.DAY_PER_YEAR
 
 local insert, concat = table.insert, table.concat
 local modf, fmod = math.modf, math.fmod
@@ -26,6 +28,8 @@ local function decompose(value, mult)
 end
 
 local units = {
+	{'years', MS_PER_YEAR},
+	{'months', MS_PER_MONTH},
 	{'weeks', MS_PER_WEEK},
 	{'days', MS_PER_DAY},
 	{'hours', MS_PER_HOUR},
@@ -68,7 +72,7 @@ function Time:toString()
 			insert(ret, n .. ' ' .. unit[1])
 		end
 	end
-	return #ret > 0 and concat(ret, ', ') or '0 milliseconds'
+	return #ret > 0 and concat(ret, ', ') or '0 seconds'
 end
 
 function Time:__eq(other) check(self, other)

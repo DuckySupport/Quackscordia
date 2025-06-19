@@ -17,6 +17,7 @@ local insert = table.insert
 local null = json.null
 local format = string.format
 local messageFlag = assert(enums.messageFlag)
+local channelType = assert(enums.channelType)
 local band, bor, bnot = bit.band, bit.bor, bit.bnot
 
 local Message, get = require('class')('Message', Snowflake)
@@ -26,7 +27,7 @@ function Message:__init(data, parent)
 	self._author = self.client._users:_insert(data.author)
 	if data.member then
 		data.member.user = data.author
-		self._parent._parent._members:_insert(data.member)
+		self._parent.guild._members:_insert(data.member)
 	end
 	self._timestamp = nil -- waste of space; can be calculated from Snowflake ID
 	if data.reactions and #data.reactions > 0 then
@@ -60,7 +61,7 @@ function Message:_loadMore(data)
 			mentions[user.id] = true
 			if user.member then
 				user.member.user = user
-				self._parent._parent._members:_insert(user.member)
+				self._parent.guild._members:_insert(user.member)
 			else
 				self.client._users:_insert(user)
 			end
@@ -87,9 +88,6 @@ function Message:_loadMore(data)
 		end
 		if self._mentioned_channels then
 			self._mentioned_channels._array = parseMentions(content, '<#(%d+)>')
-		end
-		if self._mentioned_emojis then
-			self._mentioned_emojis._array = parseMentions(content, '<a?:[%w_]+:(%d+)>')
 		end
 		self._clean_content = nil
 	end
@@ -389,8 +387,52 @@ end
 @r Message
 @d Equivalent to `Message.channel:send(content)`.
 ]=]
-function Message:reply(content)
+function Message:reply(content, reference, mention)
+    if reference == nil then reference = true end
+        
+   	if type(content) == "table" and reference then
+        content.reference = {message = self.id, mention = not not mention}
+    elseif type(content) == "string" and reference then
+        content = {content = content, reference = {message = self.id, mention = not not mention}}
+    end
 	return self._parent:send(content)
+end
+
+function Message:success(content, emoji)
+	emoji = (emoji and type(emoji) == "string") or _G.emojis.success
+	-- if self._user.id == self.client.id then
+	-- 	return self:update({embed = {description = emojis .. " " .. content, color = _G.colors.success, components = {}}})
+	-- end
+	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.success}})
+end
+
+function Message:warning(content, emoji)
+	emoji = (emoji and type(emoji) == "string") or _G.emojis.warning
+	-- if self._user.id == self.client.id then
+	-- 	return self:update({embed = {description = emojis .. " " .. content, color = _G.colors.warning, components = {}}})
+	-- end
+	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.warning}})
+end
+
+function Message:fail(content, emoji)
+	emoji = (emoji and type(emoji) == "string") or _G.emojis.fail
+	-- if self._user.id == self.client.id then
+	-- 	return self:update({embed = {description = emojis .. " " .. content, color = _G.colors.fail, components = {}}})
+	-- end
+	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.fail}})
+end
+
+function Message:heavyred(content, emoji)
+	emoji = (emoji and type(emoji) == "string") or _G.emojis.error
+	-- if self._user.id == self.client.id then
+	-- 	return self:update({embed = {description = emojis .. " " .. content, color = _G.colors.heavyred, components = {}}})
+	-- end
+	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.heavyred}})
+end
+    
+function Message:loading(content)
+    content = (content and (" " .. content)) or ""
+    return self:reply({embed = {description = _G.emojis.loading .. content, color = _G.colors.blank}})
 end
 
 --[=[
@@ -409,6 +451,21 @@ function Message:crosspost()
 	end
 end
 
+--[=[
+@m startThread
+@t http
+@p channelData string/table
+@r boolean
+@d Creates a new thread channel with this message as the starter message.
+There can only exist one thread per one message.
+Threads started from a message are always public.
+
+Equivalent to `Message.channel:startThread(channelData, self)`.
+]=]
+function Message:startThread(channelData)
+	return self._channel:startThread(channelData, self)
+end
+
 --[=[@p reactions Cache An iterable cache of all reactions that exist for this message.]=]
 function get.reactions(self)
 	if not self._reactions then
@@ -422,6 +479,17 @@ function get.mentionedUsers(self)
 	if not self._mentioned_users then
 		local users = self.client._users
 		local mentions = parseMentions(self._content, '<@!?(%d+)>')
+		self._mentioned_users = ArrayIterable(mentions, function(id)
+			return users:get(id)
+		end)
+	end
+	return self._mentioned_users
+end
+
+function get.mentionedUsersIncludingReplies(self)
+	if not self._mentioned_users then
+		local users = self.client._users
+		local mentions = parseMentions(self._content, '<@!?(%d+)>')
 		if self._reply_target then
 			insert(mentions, 1, self._reply_target)
 		end
@@ -431,6 +499,7 @@ function get.mentionedUsers(self)
 	end
 	return self._mentioned_users
 end
+
 
 --[=[@p mentionedRoles ArrayIterable An iterable array of known roles that are mentioned in this message, excluding
 the default everyone role. The message must be in a guild text channel and the
@@ -447,20 +516,6 @@ function get.mentionedRoles(self)
 	return self._mentioned_roles
 end
 
---[=[@p mentionedEmojis ArrayIterable An iterable array of all known emojis that are mentioned in this message. If
-the client does not have the emoji cached, then it will not appear here.]=]
-function get.mentionedEmojis(self)
-	if not self._mentioned_emojis then
-		local client = self.client
-		local mentions = parseMentions(self._content, '<a?:[%w_]+:(%d+)>')
-		self._mentioned_emojis = ArrayIterable(mentions, function(id)
-			local guild = client._emoji_map[id]
-			return guild and guild._emojis:get(id) or nil
-		end)
-	end
-	return self._mentioned_emojis
-end
-
 --[=[@p mentionedChannels ArrayIterable An iterable array of all known channels that are mentioned in this message. If
 the client does not have the channel cached, then it will not appear here.]=]
 function get.mentionedChannels(self)
@@ -470,29 +525,13 @@ function get.mentionedChannels(self)
 		self._mentioned_channels = ArrayIterable(mentions, function(id)
 			local guild = client._channel_map[id]
 			if guild then
-				return guild._text_channels:get(id) or guild._voice_channels:get(id) or guild._categories:get(id)
+				return guild._text_channels:get(id) or guild._forum_channels:get(id) or guild._thread_channels:get(id) or guild._voice_channels:get(id) or guild._categories:get(id)
 			else
 				return client._private_channels:get(id) or client._group_channels:get(id)
 			end
 		end)
 	end
 	return self._mentioned_channels
-end
-
---[=[@p stickers ArrayIterable An iterable array of all stickers that are sent in this message.]=]
-function get.stickers(self)
-	if not self._stickers then
-		local client = self.client
-		self._stickers = ArrayIterable(self._sticker_items, function(sticker)
-			if sticker.format_type == 1 then
-				local guild = client._sticker_map[sticker.id]
-				return guild and guild._stickers:get(sticker.id) or nil
-			else
-				-- return client:getSticker(sticker.id) ??
-			end
-		end)
-	end
-	return self._stickers
 end
 
 --[=[@p sticker Sticker The first sticker that is sent in this message.]=]
@@ -584,6 +623,11 @@ end
 
 --[=[@p author User The object of the user that created the message.]=]
 function get.author(self)
+	return self._author
+end
+
+--[=[@p user User The object of the user that created the message. Equivalent to `Message.author`.]=]
+function get.user(self)
 	return self._author
 end
 

@@ -100,9 +100,16 @@ function Emitter:emit(name, ...)
 				listeners[i] = false
 			end
 			if listener.sync then
-				fn(...)
+				local s, e = pcall(fn, ...)
+				if not s then
+				    _G.Client:error("Avoided fatal:\n    " .. e .. "\n\n")
+				end
 			else
-				wrap(fn)(...)
+				local wrapped = wrap(fn)
+				local s, e = pcall(wrapped, ...)
+				if not s then
+				    _G.Client:error("Avoided fatal:\n    " .. e .. "\n\n")
+				end
 			end
 		end
 	end
@@ -217,8 +224,14 @@ function Emitter:waitFor(name, timeout, predicate)
 		return assert(resume(thread, true, ...))
 	end)
 	timeout = timeout and setTimeout(timeout, function()
-		self:removeListener(name, fn)
-		return assert(resume(thread, false))
+		local s, e = pcall(function()
+			self:removeListener(name, fn)
+			return assert(resume(thread, false))
+		end)
+
+		if not s then
+			_G.Client:error("Avoided fatal:    " .. tostring(e))
+		end
 	end)
 	return yield()
 end

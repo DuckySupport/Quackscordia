@@ -25,7 +25,7 @@ return {
 	version = '2.13.0',
 	homepage = 'https://github.com/SinisterRectus/Discordia',
 	dependencies = {
-		'luvit/coro-http@3.2.4',
+		'luvit/coro-http@3.2.3',
 		'luvit/coro-websocket@3.1.1',
 		'luvit/secure-socket@1.2.4',
 	},

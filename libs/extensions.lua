@@ -26,6 +26,7 @@ local ceil, floor = math.ceil, math.floor
 local table = {}
 
 function table.count(tbl)
+    tbl = tbl or {}
 	local n = 0
 	for _ in pairs(tbl) do
 		n = n + 1
@@ -33,7 +34,21 @@ function table.count(tbl)
 	return n
 end
 
+function table.concatFn(tbl, connector, fn)
+    if (not tbl) or (not connector) or (not fn) then return "" end
+	local ret = ""
+	local c = 0
+
+	for i, v in pairs(tbl) do
+		c = c + 1
+		ret = ret .. ((fn and fn(v, i)) or tostring(v)) .. ((c < table.count(tbl) and connector) or "")
+	end
+
+	return ret
+end
+
 function table.deepcount(tbl)
+    if (not tbl) then return 0 end
 	local n = 0
 	for _, v in pairs(tbl) do
 		n = type(v) == 'table' and n + table.deepcount(v) or n + 1
@@ -42,6 +57,7 @@ function table.deepcount(tbl)
 end
 
 function table.copy(tbl)
+    if (not tbl) then return {} end
 	local ret = {}
 	for k, v in pairs(tbl) do
 		ret[k] = v
@@ -49,21 +65,39 @@ function table.copy(tbl)
 	return ret
 end
 
-function table.deepcopy(tbl)
+function table.deepcopy(tbl, layer)
+    if (not tbl) then return {} end
+	layer = layer or 1
+	if layer > 25 then
+		return nil
+	end
 	local ret = {}
 	for k, v in pairs(tbl) do
-		ret[k] = type(v) == 'table' and table.deepcopy(v) or v
+		ret[k] = type(v) == 'table' and table.deepcopy(v, layer + 1) or v
 	end
 	return ret
 end
 
+function table.deeppairs(tbl, fn)
+    if (not tbl) then return end
+	for k, v in pairs(tbl) do
+		if type(v) == "table" then
+			table.deeppairs(v, fn)
+		else
+			tbl[k] = fn(tbl, k, v)
+		end
+	end
+end
+
 function table.reverse(tbl)
+    if (not tbl) then return end
 	for i = 1, #tbl do
 		insert(tbl, i, remove(tbl))
 	end
 end
 
 function table.reversed(tbl)
+    if (not tbl) then return {} end
 	local ret = {}
 	for i = #tbl, 1, -1 do
 		insert(ret, tbl[i])
@@ -72,6 +106,7 @@ function table.reversed(tbl)
 end
 
 function table.keys(tbl)
+    if (not tbl) then return {} end
 	local ret = {}
 	for k in pairs(tbl) do
 		insert(ret, k)
@@ -80,6 +115,7 @@ function table.keys(tbl)
 end
 
 function table.values(tbl)
+    if (not tbl) then return {} end
 	local ret = {}
 	for _, v in pairs(tbl) do
 		insert(ret, v)
@@ -88,11 +124,13 @@ function table.values(tbl)
 end
 
 function table.randomipair(tbl)
+    if (not tbl) then return end
 	local i = random(#tbl)
 	return i, tbl[i]
 end
 
 function table.randompair(tbl)
+    if (not tbl) then return end
 	local rand = random(table.count(tbl))
 	local n = 0
 	for k, v in pairs(tbl) do
@@ -104,6 +142,7 @@ function table.randompair(tbl)
 end
 
 function table.sorted(tbl, fn)
+    if (not tbl) then return {} end
 	local ret = {}
 	for i, v in ipairs(tbl) do
 		ret[i] = v
@@ -113,6 +152,7 @@ function table.sorted(tbl, fn)
 end
 
 function table.search(tbl, value)
+    if (not tbl) or (not value) then return end
 	for k, v in pairs(tbl) do
 		if v == value then
 			return k
@@ -122,11 +162,21 @@ function table.search(tbl, value)
 end
 
 function table.slice(tbl, start, stop, step)
+    if (not tbl) then return {} end
 	local ret = {}
 	for i = start or 1, stop or #tbl, step or 1 do
 		insert(ret, tbl[i])
 	end
 	return ret
+end
+
+function table.find(tbl, val)
+    if (not tbl) or (not val) then return end
+	for i, v in pairs(tbl) do
+		if v == val then
+			return v, i
+		end
+	end
 end
 
 local string = {}
@@ -151,6 +201,28 @@ function string.split(str, delim)
 	end
 	insert(ret, sub(str, n))
 	return ret
+end
+
+function string.split(str, delim)
+	local ret = {}
+	if not str then
+		return ret
+	end
+	if not delim or delim == '' then
+		for c in gmatch(str, '.') do
+			insert(ret, c)
+		end
+		return ret
+	end
+	local n = 1
+	while true do
+		local i, j = find(str, delim, n);
+		if not i then break end;
+		insert(ret, sub(str, n, i - 1));
+		n = j + 1;
+	end;
+	insert(ret, sub(str, n));
+	return ret;
 end
 
 function string.trim(str)
@@ -219,6 +291,26 @@ function string.random(len, mn, mx)
 		insert(ret, char(random(mn, mx)))
 	end
 	return concat(ret)
+end
+
+function string.capitalize(str)
+	return str:sub(1,1):upper() .. str:sub(2):lower()
+end
+
+function string.removeWhitespace(str)
+	local ret = "" .. str
+	repeat
+		ret = ret:gsub("  ", " ")
+	until not string.find(ret, "  ")
+	return ret
+end
+
+function string.truncate(str, len)
+    if str:len() >= len then
+        return str:sub(1,len - 3) .. "..."
+    else
+        return str
+    end
 end
 
 local math = {}

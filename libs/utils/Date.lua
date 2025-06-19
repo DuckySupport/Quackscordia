@@ -133,14 +133,16 @@ with Discord's timestamp format, microseconds are also provided as a second
 return value.
 ]=]
 function Date.parseISO(str)
+	str = str or ""
 	local year, month, day, hour, min, sec, other = str:match(
 		'(%d+)-(%d+)-(%d+).(%d+):(%d+):(%d+)(.*)'
 	)
+	if not other then p("no other", tostring(str)) end
 	other = other:match('%.%d+')
 	return Date.parseTableUTC {
 		day = day, month = month, year = year,
 		hour = hour, min = min, sec = sec, isdst = false,
-	}, other and other * US_PER_S or 0
+	}, ((other) and (other * US_PER_S)) or 0
 end
 
 --[=[
@@ -198,19 +200,6 @@ function Date.parseTableUTC(tbl)
 end
 
 --[=[
-@m parseDiscordTimestamp
-@p str string
-@r number
-@r string
-@d Interprets a Discord timestamp format string `<t:seconds:style>`,
-returns Unix time in seconds and the style if one was present.
-]=]
-function Date.parseDiscordTimestamp(str)
-	local t, s = string.match(str, '<t:(%d+):?(%a?)>')
-	return tonumber(t), s
-end
-
---[=[
 @m fromISO
 @t static
 @p str string
@@ -219,6 +208,7 @@ end
 `Date(Date.parseISO(str))`.
 ]=]
 function Date.fromISO(str)
+	str = str or ""
 	return Date(Date.parseISO(str))
 end
 
@@ -301,17 +291,6 @@ end
 ]=]
 function Date.fromMicroseconds(us)
 	return Date(0, us)
-end
-
---[=[
-@m fromDiscordTimestamp
-@t static
-@p str string
-@r Date
-@d Constructs a new Date object from the Discord timestamp format `<t:seconds:style>`.
-]=]
-function Date.fromDiscordTimestamp(str)
-	return Date((Date.parseDiscordTimestamp(str)))
 end
 
 --[=[
@@ -403,21 +382,6 @@ end
 ]=]
 function Date:toMicroseconds()
 	return self._s * US_PER_S + self._us
-end
-
---[=[
-@m toDiscordTimestamp
-@op style string
-@r string
-@d Returns the date converted to the Discord timestamp format `<t:seconds:style>`.
-]=]
-function Date:toDiscordTimestamp(style)
-	local t = floor(self:toSeconds())
-	if style then
-		return string.format('<t:%d:%s>', t, style)
-	else
-		return string.format('<t:%d>', t)
-	end
 end
 
 --[=[

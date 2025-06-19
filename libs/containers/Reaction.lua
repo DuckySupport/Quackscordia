@@ -22,6 +22,7 @@ function Reaction:__init(data, parent)
 	if emoji.animated ~= null and emoji.animated ~= nil then -- not always present
 		self._emoji_animated = emoji.animated
 	end
+    self._count = data.count
 end
 
 --[=[

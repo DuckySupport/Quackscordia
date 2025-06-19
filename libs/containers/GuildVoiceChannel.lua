@@ -135,4 +135,17 @@ function get.connection(self)
 	return self._connection
 end
 
+--[=[@p textEnabled boolean Whether or not this GuildVoiceChannel support text chat.]=]
+
+function get.textEnabled(self)
+	local textEnabled = false
+	for _, feature in ipairs(self._parent._features) do
+		if feature == 'TEXT_IN_VOICE_ENABLED' then
+			textEnabled = true
+			break
+		end
+	end
+	return textEnabled
+end
+
 return GuildVoiceChannel

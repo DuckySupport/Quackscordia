@@ -367,17 +367,4 @@ function get.members(self)
 	return self._members
 end
 
---[=[@p emojis FilteredIterable A filtered iterable of guild emojis that have
-this role. If you want to check whether a specific emoji has this role, it would
-be better to get the emoji object elsewhere and use `Emoji:hasRole` rather
-than check whether the emoji exists here.]=]
-function get.emojis(self)
-	if not self._emojis then
-		self._emojis = FilteredIterable(self._parent._emojis, function(e)
-			return e:hasRole(self)
-		end)
-	end
-	return self._emojis
-end
-
 return Role

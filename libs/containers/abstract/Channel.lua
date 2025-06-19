@@ -10,6 +10,8 @@ local enums = require('enums')
 local format = string.format
 local channelType = assert(enums.channelType)
 
+local THREAD_TYPES = require('constants').THREAD_TYPES
+
 local Channel, get = require('class')('Channel', Snowflake)
 
 function Channel:__init(data, parent)
@@ -33,6 +35,8 @@ function Channel:_delete()
 		local t = self._type
 		if t == channelType.text or t == channelType.news then
 			cache = self._parent._text_channels
+		elseif t == channelType.forum then
+			cache = self._parent._forum_channels
 		elseif t == channelType.private then
 			cache = self._parent._private_channels
 		elseif t == channelType.group then
@@ -41,6 +45,8 @@ function Channel:_delete()
 			cache = self._parent._voice_channels
 		elseif t == channelType.category then
 			cache = self._parent._categories
+		elseif THREAD_TYPES[t] then
+			cache = self._parent._thread_channels
 		end
 		if cache then
 			cache:_delete(self._id)
@@ -61,6 +67,11 @@ end
 may resolve as a link to a channel in the official Discord client.]=]
 function get.mentionString(self)
 	return format('<#%s>', self._id)
+end
+
+--[=[@p isThread boolean Whether this channel is a thread channel.]=]
+function get.isThread(self)
+	return THREAD_TYPES[self._type] or false
 end
 
 return Channel
