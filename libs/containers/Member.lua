@@ -24,8 +24,6 @@ local insert, remove, sort = table.insert, table.remove, table.sort
 local isInstance = class.isInstance
 local permission = assert(enums.permission)
 
-local Member, get = class('Member', UserPresence)
-
 local function createPermissionOverwrite(data, parent)
 	print("before init", data)
 	local instance = setmetatable({}, PermissionOverwrite)
@@ -35,6 +33,7 @@ local function createPermissionOverwrite(data, parent)
 	return instance
 end
 
+_G.createPermissionOverwrite = createPermissionOverwrite
 
 local function wrapOverwrites(parent, raw)
 	return {
@@ -55,9 +54,27 @@ local function wrapOverwrites(parent, raw)
 					return createPermissionOverwrite(data, parent)
 				end
 			end
+		end,
+
+		_insert = function(_, data)
+			table.insert(raw, data)
+			return createPermissionOverwrite(data, parent)
+		end,
+
+		_delete = function(_, id)
+			for i = #raw, 1, -1 do
+				if raw[i].id == id then
+					table.remove(raw, i)
+					break
+				end
+			end
 		end
 	}
 end
+
+_G.wrapOverwrites = wrapOverwrites
+
+local Member, get = class('Member', UserPresence)
 
 function Member:__init(data, parent)
 	UserPresence.__init(self, data, parent)

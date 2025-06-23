@@ -15,6 +15,7 @@ local Cache = require('iterables/Cache')
 local SecondaryCache = require('iterables/SecondaryCache')
 local Resolver = require('client/Resolver')
 local Time = require('utils/Time')
+local API = require("client/API")
 
 local isInstance = class.isInstance
 local classes = class.classes
@@ -234,7 +235,9 @@ function GuildChannel:getPermissionOverwriteFor(obj)
 	else
 		return nil, 'Invalid Role or Member: ' .. tostring(obj)
 	end
-	local overwrites = self._permission_overwrites
+	local raw = self.parent.parent._api:getChannelPermissionOverwrites(self.id)
+	local overwrites = wrapOverwrites(self, raw)
+	
 	return overwrites:get(id) or overwrites:_insert(setmetatable({
 		id = id, type = type, allow = 0, deny = 0
 	}, {__jsontype = 'object'}))
@@ -358,7 +361,10 @@ end
 --[=[@p permissionOverwrites Cache An iterable cache of all overwrites that exist in this channel. To access an
 overwrite that may exist, but is not cached, use `GuildChannel:getPermissionOverwriteFor`.]=]
 function get.permissionOverwrites(self)
-	return self._permission_overwrites
+	local raw = self.parent.parent._api:getChannelPermissionOverwrites(self.id)
+	local overwrites = wrapOverwrites(self, raw)
+
+	return overwrites
 end
 
 --[=[@p name string The name of the channel. This should be between 2 and 100 characters in length.]=]
@@ -385,7 +391,10 @@ end
 channel. In the Discord channel, private text channels are indicated with a lock
 icon and private voice channels are not visible.]=]
 function get.private(self)
-	local overwrite = self._permission_overwrites:get(self._parent._id)
+	local raw = self.parent.parent._api:getChannelPermissionOverwrites(self.id)
+	local overwrites = wrapOverwrites(self, raw)
+	local overwrite = overwrites:get(self._parent._id)
+	
 	return overwrite and overwrite:getDeniedPermissions():has('readMessages')
 end
 
