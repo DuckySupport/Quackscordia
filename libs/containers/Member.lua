@@ -26,13 +26,23 @@ local permission = assert(enums.permission)
 
 local Member, get = class('Member', UserPresence)
 
+local PermissionOverwriteClass = require('containers/PermissionOverwrite')
+
+local function createPermissionOverwrite(data, parent)
+	-- Class constructor doesn't return, it mutates the instance (`self`) so we need to use `.__init`
+	local overwrite = setmetatable({}, PermissionOverwriteClass)
+	overwrite:__init(data, parent)
+	p(overwrite)
+	return overwrite
+end
+
 local function wrapOverwrites(parent, raw)
 	return {
 		get = function(_, id)
 			for _, data in ipairs(raw) do
 				if data.id == id then
 					p("data.id == id true")
-					return PermissionOverwrite(parent, data)
+					return createPermissionOverwrite(data, parent)
 				end
 			end
 		end,
@@ -43,7 +53,7 @@ local function wrapOverwrites(parent, raw)
 				i = i + 1
 				local data = raw[i]
 				if data then
-					return PermissionOverwrite(parent, data)
+					return createPermissionOverwrite(data, parent)
 				end
 			end
 		end
@@ -153,8 +163,6 @@ function Member:hasPermission(channel, perm)
 		local overwrites = raw and wrapOverwrites(channel, raw)
 		p("not overwrites", not overwrites)
 
-		p(self.id)
-		p("not overwrites:get(self.id)", not overwrites:get(self.id))
 		local overwrite = overwrites and overwrites:get(self.id)
 		p("not overwrite", not overwrite)
 		if overwrite then
