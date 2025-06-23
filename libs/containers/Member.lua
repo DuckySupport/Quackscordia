@@ -25,11 +25,8 @@ local isInstance = class.isInstance
 local permission = assert(enums.permission)
 
 local function createPermissionOverwrite(data, parent)
-	print("before init", data)
 	local instance = setmetatable({}, PermissionOverwrite)
-	print("after setmetatable", instance)
 	instance:__init(data, parent)
-	print("after init", instance)
 	return instance
 end
 
