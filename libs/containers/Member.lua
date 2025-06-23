@@ -26,15 +26,15 @@ local permission = assert(enums.permission)
 
 local Member, get = class('Member', UserPresence)
 
-local PermissionOverwriteClass = require('containers/PermissionOverwrite')
-
 local function createPermissionOverwrite(data, parent)
-	-- Class constructor doesn't return, it mutates the instance (`self`) so we need to use `.__init`
-	local overwrite = setmetatable({}, PermissionOverwriteClass)
-	overwrite:__init(data, parent)
-	p(overwrite)
-	return overwrite
+	print("before init", data)
+	local instance = setmetatable({}, PermissionOverwrite)
+	print("after setmetatable", instance)
+	instance:__init(data, parent)
+	print("after init", instance)
+	return instance
 end
+
 
 local function wrapOverwrites(parent, raw)
 	return {
@@ -159,12 +159,9 @@ function Member:hasPermission(channel, perm)
 	if channel then
 
 		local raw = self.parent.parent._api:getChannelPermissionOverwrites(channel.id)
-		p("not raw:", not raw)
 		local overwrites = raw and wrapOverwrites(channel, raw)
-		p("not overwrites", not overwrites)
-
 		local overwrite = overwrites and overwrites:get(self.id)
-		p("not overwrite", not overwrite)
+
 		if overwrite then
 			if overwrite:getAllowedPermissions():has(n) then
 				p("overwrite:getAllowedPermissions():has(n) true")
@@ -250,7 +247,7 @@ function Member:getPermissions(channel)
 	if channel then
 
 		local raw = self.parent.parent._api:getChannelPermissionOverwrites(channel.id)
-		local overwrites = wrapOverwrites(channel, raw)
+		local overwrites = raw and wrapOverwrites(channel, raw)
 
 		local everyone = overwrites and overwrites:get(guild.id)
 		if everyone then
