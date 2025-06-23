@@ -33,7 +33,7 @@ end
 _G.createPermissionOverwrite = createPermissionOverwrite
 
 local function wrapOverwrites(parent, raw)
-	return {
+	return ((parent and raw) and {
 		get = function(_, id)
 			for _, data in ipairs(raw) do
 				if data.id == id then
@@ -66,7 +66,7 @@ local function wrapOverwrites(parent, raw)
 				end
 			end
 		end
-	}
+	})
 end
 
 _G.wrapOverwrites = wrapOverwrites
