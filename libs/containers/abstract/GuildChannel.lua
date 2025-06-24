@@ -238,9 +238,9 @@ function GuildChannel:getPermissionOverwriteFor(obj)
 	local raw = self.parent.parent._api:getChannelPermissionOverwrites(self.id)
 	local overwrites = wrapOverwrites(self, raw)
 	
-	return overwrites and overwrites:get(id) or overwrites:_insert(setmetatable({
+	return overwrites and (overwrites:get(id) or overwrites:_insert(setmetatable({
 		id = id, type = type, allow = 0, deny = 0
-	}, {__jsontype = 'object'}))
+	}, {__jsontype = 'object'})))
 end
 
 --[=[
