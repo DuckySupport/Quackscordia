@@ -15,6 +15,7 @@ local Cache = require('iterables/Cache')
 local SecondaryCache = require('iterables/SecondaryCache')
 local Resolver = require('client/Resolver')
 local Time = require('utils/Time')
+local API = require("client/API")
 
 local isInstance = class.isInstance
 local classes = class.classes
@@ -358,7 +359,7 @@ end
 --[=[@p permissionOverwrites Cache An iterable cache of all overwrites that exist in this channel. To access an
 overwrite that may exist, but is not cached, use `GuildChannel:getPermissionOverwriteFor`.]=]
 function get.permissionOverwrites(self)
-	return {}
+	return self._permission_overwrites
 end
 
 --[=[@p name string The name of the channel. This should be between 2 and 100 characters in length.]=]

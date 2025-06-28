@@ -14,10 +14,10 @@ local ArrayIterable = require('iterables/ArrayIterable')
 local Color = require('utils/Color')
 local Resolver = require('client/Resolver')
 local GuildChannel = require('containers/abstract/GuildChannel')
+local PermissionOverwrite = require('containers/PermissionOverwrite')
 local Permissions = require('utils/Permissions')
 local Date = require('utils/Date')
 local Time = require('utils/Time')
-local API  = require('client/API')
 
 local insert, remove, sort = table.insert, table.remove, table.sort
 local isInstance = class.isInstance

@@ -62,6 +62,8 @@ local defaultOptions = {
 	lastShard = -1,
 	largeThreshold = 100,
 	cacheAllMembers = false,
+	cacheLimit = 1000,
+	suppressUncachedWarning = false,
 	autoReconnect = true,
 	compress = true,
 	bitrate = 64000,
@@ -72,8 +74,6 @@ local defaultOptions = {
 	syncGuilds = false,
 	gatewayIntents = 3243773, -- all non-privileged intents
 }
-
-local LimitedCache = require('iterables/LimitedCache')
 
 local function parseOptions(customOptions)
 	if type(customOptions) == 'table' then
@@ -89,7 +89,7 @@ local function parseOptions(customOptions)
 		for k, v in pairs(customOptions) do -- validate options
 			local default = type(defaultOptions[k])
 			local custom = type(v)
-			if default ~= custom and k ~= "cache" then
+			if default ~= custom then
 				return error(format('invalid client option %q (%s expected, got %s)', k, default, custom), 3)
 			end
 			if custom == 'number' and (v < 0 or v % 1 ~= 0) then
@@ -104,31 +104,18 @@ end
 
 local Client, get = require('class')('Client', Emitter)
 
-local function newCache(settings, constructor, parent)
-	if settings == false then
-		return nil
-	elseif type(settings) == 'number' then
-		return LimitedCache(settings, constructor, parent)
-	elseif settings == 'weak' then
-		return WeakCache({}, constructor, parent)
-	else
-		return Cache({}, constructor, parent)
-	end
-end
-
 function Client:__init(options)
 	Emitter.__init(self)
 	options = assert(parseOptions(options))
-	local cacheSettings = options.cache or {}
 	self._options = options
 	self._shards = {}
 	self._api = API(self)
 	self._mutex = Mutex()
-	self._users = newCache(cacheSettings.users, User, self)
-	self._guilds = newCache(cacheSettings.guilds, Guild, self)
-	self._group_channels = newCache(cacheSettings.groupChannels, GroupChannel, self)
-	self._private_channels = newCache(cacheSettings.privateChannels, PrivateChannel, self)
-	self._relationships = newCache(cacheSettings.relationships, Relationship, self)
+	self._users = Cache({}, User, self, options.cacheLimit)
+	self._guilds = Cache({}, Guild, self, options.cacheLimit)
+	self._group_channels = Cache({}, GroupChannel, self, options.cacheLimit)
+	self._private_channels = Cache({}, PrivateChannel, self, options.cacheLimit)
+	self._relationships = Cache({}, Relationship, self, options.cacheLimit)
 	self._webhooks = WeakCache({}, Webhook, self) -- used for audit logs
 	self._logger = Logger(options.logLevel, options.dateTime, options.logFile)
 	self._voice = VoiceManager(self)
