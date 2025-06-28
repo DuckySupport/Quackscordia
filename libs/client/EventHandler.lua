@@ -1070,7 +1070,6 @@ function EventHandler.GUILD_AUDIT_LOG_ENTRY_CREATE(d, client)
 end
 
 function EventHandler.INTERACTION_CREATE(d, client)
-	return client:emit('interactionCreate', d)
 end
 
 return EventHandler
