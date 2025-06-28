@@ -255,15 +255,6 @@ function API:getChannel(channel_id) -- not exposed, use cache
 	return self:request("GET", endpoint)
 end
 
-function API:getChannelPermissionOverwrites(channel_id)
-    local data, err = self:getChannel(channel_id)
-    if data then
-        return data.permission_overwrites or {}
-    else
-        return nil, err
-    end
-end
-
 function API:modifyChannel(channel_id, payload) -- Channel:_modify
 	local endpoint = f(endpoints.CHANNEL, channel_id)
 	return self:request("PATCH", endpoint, payload)

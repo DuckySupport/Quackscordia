@@ -12,6 +12,10 @@ local SecondaryCache = require('iterables/SecondaryCache')
 local Resolver = require('client/Resolver')
 local fs = require('fs')
 
+local Cache = require('iterables/Cache')
+local LimitedCache = require('iterables/LimitedCache')
+local WeakCache = require('iterables/WeakCache')
+
 local splitPath = pathjoin.splitPath
 local insert, remove, concat = table.insert, table.remove, table.concat
 local format = string.format
@@ -19,9 +23,22 @@ local readFileSync = fs.readFileSync
 
 local TextChannel, get = require('class')('TextChannel', Channel)
 
+local function newCache(settings, constructor, parent)
+	if settings == false then
+		return nil
+	elseif type(settings) == 'number' then
+		return LimitedCache(settings, constructor, parent)
+	elseif settings == 'weak' then
+		return WeakCache({}, constructor, parent)
+	else
+		return Cache({}, constructor, parent)
+	end
+end
+
 function TextChannel:__init(data, parent)
 	Channel.__init(self, data, parent)
-	self._messages = WeakCache({}, Message, self)
+	local cacheSettings = self.client._options.cache or {}
+	self._messages = newCache(cacheSettings.messages, Message, self)
 end
 
 --[=[

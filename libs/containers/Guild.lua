@@ -23,16 +23,33 @@ local Snowflake = require('containers/abstract/Snowflake')
 local json = require('json')
 local enums = require('enums')
 
+local LimitedCache = require('iterables/LimitedCache')
+local WeakCache = require('iterables/WeakCache')
+
 local channelType = assert(enums.channelType)
 local floor = math.floor
 local format = string.format
 
 local Guild, get = require('class')('Guild', Snowflake)
 
+local function newCache(settings, constructor, parent)
+	if settings == false then
+		return nil
+	elseif type(settings) == 'number' then
+		return LimitedCache(settings, constructor, parent)
+	elseif settings == 'weak' then
+		return WeakCache({}, constructor, parent)
+	else
+		return Cache({}, constructor, parent)
+	end
+end
+
 function Guild:__init(data, parent)
 	Snowflake.__init(self, data, parent)
-	self._roles = Cache({}, Role, self)
-	self._members = Cache({}, Member, self)
+	local cacheSettings = self.client._options.cache or {}
+	self._roles = newCache(cacheSettings.roles, Role, self)
+	self._members = newCache(cacheSettings.members, Member, self)
+	self._emojis = newCache(cacheSettings.emojis, Emoji, self)
 	self._text_channels = Cache({}, GuildTextChannel, self)
 	self._voice_channels = Cache({}, GuildVoiceChannel, self)
 	self._forum_channels = Cache({}, GuildForumChannel, self)
