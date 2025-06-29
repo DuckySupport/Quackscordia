@@ -28,9 +28,9 @@ local User = require('containers/User')
 local Invite = require('containers/Invite')
 local Webhook = require('containers/Webhook')
 local Relationship = require('containers/Relationship')
-local GuildForumChannel = require('containers/GuildForumChannel')
 
 local Cache = require('iterables/Cache')
+local LimitedCache = require('iterables/LimitedCache')
 local WeakCache = require('iterables/WeakCache')
 local Emitter = require('utils/Emitter')
 local Logger = require('utils/Logger')
@@ -63,8 +63,7 @@ local defaultOptions = {
 	lastShard = -1,
 	largeThreshold = 100,
 	cacheAllMembers = false,
-	cacheLimit = 1000,
-	suppressUncachedWarning = false,
+	cacheLimits = {},
 	autoReconnect = true,
 	compress = true,
 	bitrate = 64000,
@@ -74,6 +73,7 @@ local defaultOptions = {
 	dateTime = '%F %T',
 	syncGuilds = false,
 	gatewayIntents = 3243773, -- all non-privileged intents
+	suppressUnhandledEvents = false,
 }
 
 local function parseOptions(customOptions)
@@ -112,12 +112,23 @@ function Client:__init(options)
 	self._shards = {}
 	self._api = API(self)
 	self._mutex = Mutex()
-	self._users = Cache({}, User, self, options.cacheLimit)
-	self._guilds = Cache({}, Guild, self, options.cacheLimit)
-	self._group_channels = Cache({}, GroupChannel, self, options.cacheLimit)
-	self._private_channels = Cache({}, PrivateChannel, self, options.cacheLimit)
-	self._relationships = Cache({}, Relationship, self, options.cacheLimit)
-	self._forum_channels = Cache({}, GuildForumChannel, self, options.cacheLimit)
+
+	local limits = options.cacheLimits
+	local function createCache(name, constructor)
+		local limit = limits and limits[name]
+		if limit and limit > 0 then
+			return LimitedCache(limit, constructor, self)
+		else
+			return Cache({}, constructor, self)
+		end
+	end
+
+	self._users = createCache('users', User)
+	self._guilds = Cache({}, Guild, self) -- Guilds are never limited
+	self._group_channels = createCache('groupChannels', GroupChannel)
+	self._private_channels = createCache('privateChannels', PrivateChannel)
+	self._relationships = createCache('relationships', Relationship)
+
 	self._webhooks = WeakCache({}, Webhook, self) -- used for audit logs
 	self._logger = Logger(options.logLevel, options.dateTime, options.logFile)
 	self._voice = VoiceManager(self)
@@ -556,18 +567,14 @@ function Client:getChannel(id)
 	id = Resolver.channelId(id)
 	local guild = self._channel_map[id]
 	if guild then
-		local channel = (guild._forum_channels and guild._forum_channels:get(id))
-			or (guild._text_channels and guild._text_channels:get(id))
-			or (guild._voice_channels and guild._voice_channels:get(id))
-			or (guild._thread_channels and guild._thread_channels:get(id))
-			or (guild._categories and guild._categories:get(id))
-		if channel then
-			return channel
-		end
+		return guild._forum_channels:get(id)
+			or guild._text_channels:get(id)
+			or guild._voice_channels:get(id)
+			or guild._thread_channels:get(id)
+			or guild._categories:get(id)
+	else
+		return self._private_channels:get(id) or self._group_channels:get(id)
 	end
-	return self._private_channels:get(id)
-		or self._group_channels:get(id)
-		or (self._forum_channels and self._forum_channels:get(id))
 end
 
 --[=[

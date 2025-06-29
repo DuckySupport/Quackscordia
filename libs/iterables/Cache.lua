@@ -29,7 +29,7 @@ local function hash(data)
 	end
 end
 
-function Cache:__init(array, constructor, parent, limit)
+function Cache:__init(array, constructor, parent)
 	local objects = {}
 	for _, data in ipairs(array) do
 		local obj = constructor(data, parent)
@@ -41,7 +41,6 @@ function Cache:__init(array, constructor, parent, limit)
 	self._parent = parent
 	self._deleted = setmetatable({}, meta)
 	self._hash = hash
-	self._limit = limit or 1000
 end
 
 function Cache:__pairs()
@@ -65,7 +64,7 @@ local function remove(self, k, obj)
 	return obj
 end
 
-function Cache:_insert(data)
+function Cache:_insert(data, parent)
 	local k = assert(self._hash(data))
 	local old = self._objects[k]
 	if old then
@@ -76,11 +75,7 @@ function Cache:_insert(data)
 		deleted:_load(data)
 		return deleted
 	else
-		if self._count >= self._limit then
-			local oldestKey = next(self._objects)
-			self:_delete(oldestKey)
-		end
-		local obj = self._constructor(data, self._parent)
+		local obj = self._constructor(data, parent or self._parent)
 		return insert(self, k, obj)
 	end
 end
@@ -110,7 +105,6 @@ function Cache:_delete(k)
 end
 
 function Cache:_load(array, update)
-	if not array then return end
 	if update then
 		local updated = {}
 		for _, data in ipairs(array) do

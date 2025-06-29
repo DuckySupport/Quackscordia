@@ -5,6 +5,7 @@ channels, and roles that represents one community.
 ]=]
 
 local Cache = require('iterables/Cache')
+local LimitedCache = require('iterables/LimitedCache')
 local Role = require('containers/Role')
 local Emoji = require('containers/Emoji')
 local Invite = require('containers/Invite')
@@ -31,13 +32,24 @@ local Guild, get = require('class')('Guild', Snowflake)
 
 function Guild:__init(data, parent)
 	Snowflake.__init(self, data, parent)
-	self._roles = Cache({}, Role, self)
-	self._members = Cache({}, Member, self)
-	self._text_channels = Cache({}, GuildTextChannel, self)
-	self._voice_channels = Cache({}, GuildVoiceChannel, self)
-	self._forum_channels = Cache({}, GuildForumChannel, self)
-	self._thread_channels = Cache({}, GuildThreadChannel, self)
-	self._categories = Cache({}, GuildCategoryChannel, self)
+
+	local limits = self.client._options.cacheLimits
+	local function createCache(name, constructor, cache_parent)
+		local limit = limits and limits[name]
+		if limit and limit > 0 then
+			return LimitedCache(limit, constructor, cache_parent)
+		else
+			return Cache({}, constructor, cache_parent)
+		end
+	end
+
+	self._roles = createCache('roles', Role, self)
+	self._members = createCache('members', Member, self)
+	self._text_channels = createCache('textChannels', GuildTextChannel, self)
+	self._voice_channels = createCache('voiceChannels', GuildVoiceChannel, self)
+	self._forum_channels = createCache('forumChannels', GuildForumChannel, self)
+	self._thread_channels = createCache('threadChannels', GuildThreadChannel)
+	self._categories = createCache('categories', GuildCategoryChannel, self)
 	self._voice_states = {}
 	if not data.unavailable then
 		return self:_makeAvailable(data)
