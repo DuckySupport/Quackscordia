@@ -16,13 +16,14 @@ end
 function ThreadMember:__init(data, parent)
 	prepareData(data)
 	Container.__init(self, data, parent)
-	self._guild = parent.guild
+	self._guild = parent.guild or parent.client.guilds:get(data.guild_id)
 	return self:_loadMore(data)
 end
 
 function ThreadMember:_load(data)
 	prepareData(data)
 	Container._load(self, data)
+	self._guild = self._parent.guild
 	return self:_loadMore(data)
 end
 
