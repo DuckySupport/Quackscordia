@@ -441,7 +441,9 @@ function EventHandler.GUILD_MEMBER_ADD(d, client)
 	end
 	if guild then
 		local member = guild._members:_insert(d)
-		guild._member_count = guild._member_count + 1
+		if type(guild._member_count) == "number" then
+			guild._member_count = guild._member_count + 1
+		end
 		return client:emit('memberJoin', member)
 	end
 end
@@ -474,7 +476,9 @@ function EventHandler.GUILD_MEMBER_REMOVE(d, client)
 	end
 	if guild then
 		local member = guild._members:_remove(d)
-		guild._member_count = guild._member_count - 1
+		if type(guild._member_count) == "number" then
+			guild._member_count = guild._member_count - 1
+		end
 		return client:emit('memberLeave', member)
 	end
 end
