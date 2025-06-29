@@ -9,6 +9,7 @@ local null = json.null
 local THREAD_TYPES = require('constants').THREAD_TYPES
 
 local function warning(client, object, id, event)
+	if client._options.suppressUncachedWarning then return end
 	return client:warning('Uncached %s (%s) on %s', object, id, event)
 end
 
@@ -50,8 +51,10 @@ local function getChannel(client, d)
 					if fetchedGuild then
 						guild = client._guilds:_insert(fetchedGuild)
 					else
-						client:warning("Failed to fetch guild %s for channel %s: %s", fetchedChannel.guild_id, d.channel_id, guildErr)
-						return nil -- Cannot proceed without guild
+						if not client._options.suppressUncachedWarning then
+				client:warning("Failed to fetch guild %s for channel %s: %s", fetchedChannel.guild_id, d.channel_id, guildErr)
+			end
+			return nil -- Cannot proceed without guild
 					end
 				end
 				-- Now that we have a guild (cached or newly fetched), insert the channel
@@ -68,7 +71,9 @@ local function getChannel(client, d)
 				end
 			end
 		else
-			client:warning("Failed to fetch channel %s: %s", d.channel_id, err)
+			if not client._options.suppressUncachedWarning then
+				client:warning("Failed to fetch channel %s: %s", d.channel_id, err)
+			end
 		end
 	end
 	return channel
@@ -150,7 +155,10 @@ function EventHandler.GUILD_MEMBERS_CHUNK(d, client, shard)
 		if fetchedGuild then
 			guild = client._guilds:_insert(fetchedGuild)
 		else
-			return client:warning("Failed to fetch guild %s for GUILD_MEMBERS_CHUNK: %s", d.guild_id, err)
+			if not client._options.suppressUncachedWarning then
+				return client:warning("Failed to fetch guild %s for GUILD_MEMBERS_CHUNK: %s", d.guild_id, err)
+			end
+			return
 		end
 	end
 	if guild then -- Ensure guild is not nil after potential fetch attempt
@@ -169,7 +177,10 @@ function EventHandler.GUILD_SYNC(d, client, shard)
 		if fetchedGuild then
 			guild = client._guilds:_insert(fetchedGuild)
 		else
-			return client:warning("Failed to fetch guild %s for GUILD_SYNC: %s", d.id, err)
+			if not client._options.suppressUncachedWarning then
+				return client:warning("Failed to fetch guild %s for GUILD_SYNC: %s", d.id, err)
+			end
+			return
 		end
 	end
 	if guild then -- Ensure guild is not nil after potential fetch attempt
@@ -185,14 +196,17 @@ end
 function EventHandler.CHANNEL_CREATE(d, client)
 	local channel
 	local t = d.type
-	if t == channelType.text or t == channelType.news or t == channelType.voice or t == channelType.category then
+	if t == channelType.text or t == channelType.news or t == channelType.voice or t == channelType.category or t == channelType.forum then
 		local guild = client._guilds:get(d.guild_id)
 		if not guild then
 			local fetchedGuild, err = client._api:getGuild(d.guild_id)
 			if fetchedGuild then
 				guild = client._guilds:_insert(fetchedGuild)
 			else
-				return client:warning("Failed to fetch guild %s for CHANNEL_CREATE: %s", d.guild_id, err)
+				if not client._options.suppressUncachedWarning then
+					return client:warning("Failed to fetch guild %s for CHANNEL_CREATE: %s", d.guild_id, err)
+				end
+				return
 			end
 		end
 		if guild then
@@ -202,6 +216,8 @@ function EventHandler.CHANNEL_CREATE(d, client)
 				channel = guild._voice_channels:_insert(d)
 			elseif t == channelType.category then
 				channel = guild._categories:_insert(d)
+			elseif t == channelType.forum then
+				channel = guild._forum_channels:_insert(d)
 			end
 		end
 	elseif t == channelType.private then
@@ -219,7 +235,7 @@ end
 function EventHandler.CHANNEL_UPDATE(d, client)
 	local channel
 	local t = d.type
-	if t == channelType.text or t == channelType.news or t == channelType.voice or t == channelType.category then
+	if t == channelType.text or t == channelType.news or t == channelType.voice or t == channelType.category or t == channelType.forum then
 		local guild = client._guilds:get(d.guild_id)
 		if not guild then
 			local fetchedGuild, err = client._api:getGuild(d.guild_id)
@@ -236,6 +252,10 @@ function EventHandler.CHANNEL_UPDATE(d, client)
 				channel = guild._voice_channels:_insert(d)
 			elseif t == channelType.category then
 				channel = guild._categories:_insert(d)
+			elseif t == channelType.forum then
+				channel = guild._forum_channels:_insert(d)
+			elseif t == channelType.stage then
+
 			end
 		end
 	elseif t == channelType.private then -- private channels should never update
@@ -253,7 +273,7 @@ end
 function EventHandler.CHANNEL_DELETE(d, client)
 	local channel
 	local t = d.type
-	if t == channelType.text or t == channelType.news or t == channelType.voice or t == channelType.category then
+	if t == channelType.text or t == channelType.news or t == channelType.voice or t == channelType.category or t == channelType.forum then
 		local guild = client._guilds:get(d.guild_id)
 		if not guild then
 			local fetchedGuild, err = client._api:getGuild(d.guild_id)
@@ -270,6 +290,8 @@ function EventHandler.CHANNEL_DELETE(d, client)
 				channel = guild._voice_channels:_remove(d)
 			elseif t == channelType.category then
 				channel = guild._categories:_remove(d)
+			elseif t == channelType.forum then
+				channel = guild._forum_channels:_remove(d)
 			end
 		end
 	elseif t == channelType.private then
@@ -387,14 +409,21 @@ end
 function EventHandler.GUILD_EMOJIS_UPDATE(d, client)
 	local guild = client._guilds:get(d.guild_id)
 	if not guild then
-		local fetchedGuild, err = client._api:getGuild(d.guild_id)
-		if fetchedGuild then
-			guild = client._guilds:_insert(fetchedGuild)
+		if client._options.suppressUncachedWarning then return end
+		return client:warning("Uncached Guild (%s) on GUILD_EMOJIS_UPDATE", d.guild_id)
+	end
+
+	if not guild._emojis then
+		client:debug("Incomplete guild %s found in cache on GUILD_EMOJIS_UPDATE, fetching from API.", d.guild_id)
+		local fullGuildData, err = client._api:getGuild(d.guild_id)
+		if fullGuildData then
+			guild = client._guilds:_insert(fullGuildData)
 		else
-			return client:warning("Failed to fetch guild %s for GUILD_EMOJIS_UPDATE: %s", d.guild_id, err)
+			return client:warning("Could not fetch full guild %s to update emojis: %s", d.guild_id, err)
 		end
 	end
-	if guild then
+
+	if guild and guild._emojis then
 		guild._emojis:_load(d.emojis, true)
 		return client:emit('emojisUpdate', guild)
 	end
@@ -501,10 +530,24 @@ end
 
 function EventHandler.MESSAGE_CREATE(d, client)
 	local channel = getChannel(client, d)
-	if not channel then return end -- getChannel already handles warning
+	if not channel then return end
 
-	-- Ensure it's a text-based channel before trying to access _messages
-	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
+	if channel.guild and not channel.guild._members then
+		client:debug("Incomplete guild %s found for channel %s, fetching from API.", channel.guild.id, channel.id)
+		local fullGuildData, err = client._api:getGuild(channel.guild.id)
+		if fullGuildData then
+			local updatedGuild = client._guilds:_insert(fullGuildData)
+			channel.guild = updatedGuild
+			if channel._parent then
+				channel._parent.guild = updatedGuild
+			end
+		else
+			client:warning("Could not fetch full guild %s to process message: %s", channel.guild.id, err)
+			return 
+		end
+	end
+
+	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.voice or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
 		return client:warning("Received MESSAGE_CREATE for non-text channel %s (type %s)", d.channel_id, channel.type)
 	end
 
@@ -517,7 +560,7 @@ function EventHandler.MESSAGE_UPDATE(d, client) -- may not contain the whole mes
 	if not channel then return end -- getChannel already handles warning
 
 	-- Ensure it's a text-based channel before trying to access _messages
-	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
+	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.voice or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
 		return client:warning("Received MESSAGE_UPDATE for non-text channel %s (type %s)", d.channel_id, channel.type)
 	end
 
@@ -548,7 +591,7 @@ function EventHandler.MESSAGE_DELETE(d, client) -- message object not provided
 	if not channel then return end -- getChannel already handles warning
 
 	-- Ensure it's a text-based channel before trying to access _messages
-	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
+	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.voice or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
 		return client:warning("Received MESSAGE_DELETE for non-text channel %s (type %s)", d.channel_id, channel.type)
 	end
 
@@ -556,8 +599,9 @@ function EventHandler.MESSAGE_DELETE(d, client) -- message object not provided
 	if message then
 		return client:emit('messageDelete', message)
 	else
-		-- If message was not cached, we can't emit the cached event, but we still have the channel.
-		return client:warning("Message %s not found in cache for MESSAGE_DELETE", d.id)
+		if not client._options.suppressUncachedWarning then
+			client:warning("Message %s not found in cache for MESSAGE_DELETE", d.id)
+		end
 	end
 end
 
@@ -566,7 +610,7 @@ function EventHandler.MESSAGE_DELETE_BULK(d, client)
 	if not channel then return end -- getChannel already handles warning
 
 	-- Ensure it's a text-based channel before trying to access _messages
-	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
+	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.voice or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
 		return client:warning("Received MESSAGE_DELETE_BULK for non-text channel %s (type %s)", d.channel_id, channel.type)
 	end
 
@@ -579,7 +623,9 @@ function EventHandler.MESSAGE_DELETE_BULK(d, client)
 
 			client:emit('messageDelete', message)
 		else
-			client:warning("Message %s not found in cache for MESSAGE_DELETE_BULK", id)
+			if not client._options.suppressUncachedWarning then
+				client:warning("Message %s not found in cache for MESSAGE_DELETE_BULK", id)
+			end
 		end
 	end
 end
@@ -589,7 +635,7 @@ function EventHandler.MESSAGE_REACTION_ADD(d, client)
 	if not channel then return end -- getChannel already handles warning
 
 	-- Ensure it's a text-based channel before trying to access _messages
-	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
+	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.voice or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
 		return client:warning("Received MESSAGE_REACTION_ADD for non-text channel %s (type %s)", d.channel_id, channel.type)
 	end
 
@@ -615,7 +661,7 @@ function EventHandler.MESSAGE_REACTION_REMOVE(d, client)
 	if not channel then return end -- getChannel already handles warning
 
 	-- Ensure it's a text-based channel before trying to access _messages
-	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
+	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.voice or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
 		return client:warning("Received MESSAGE_REACTION_REMOVE for non-text channel %s (type %s)", d.channel_id, channel.type)
 	end
 
@@ -645,7 +691,7 @@ function EventHandler.MESSAGE_REACTION_REMOVE_ALL(d, client)
 	if not channel then return end -- getChannel already handles warning
 
 	-- Ensure it's a text-based channel before trying to access _messages
-	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
+	if not (channel.type == channelType.text or channel.type == channelType.news or channel.type == channelType.voice or channel.type == channelType.private or channel.type == channelType.group or THREAD_TYPES[channel.type] or channel.type == channelType.forum) then
 		return client:warning("Received MESSAGE_REACTION_REMOVE_ALL for non-text channel %s (type %s)", d.channel_id, channel.type)
 	end
 

@@ -28,6 +28,7 @@ local User = require('containers/User')
 local Invite = require('containers/Invite')
 local Webhook = require('containers/Webhook')
 local Relationship = require('containers/Relationship')
+local GuildForumChannel = require('containers/GuildForumChannel')
 
 local Cache = require('iterables/Cache')
 local WeakCache = require('iterables/WeakCache')
@@ -116,6 +117,7 @@ function Client:__init(options)
 	self._group_channels = Cache({}, GroupChannel, self, options.cacheLimit)
 	self._private_channels = Cache({}, PrivateChannel, self, options.cacheLimit)
 	self._relationships = Cache({}, Relationship, self, options.cacheLimit)
+	self._forum_channels = Cache({}, GuildForumChannel, self, options.cacheLimit)
 	self._webhooks = WeakCache({}, Webhook, self) -- used for audit logs
 	self._logger = Logger(options.logLevel, options.dateTime, options.logFile)
 	self._voice = VoiceManager(self)
@@ -554,14 +556,18 @@ function Client:getChannel(id)
 	id = Resolver.channelId(id)
 	local guild = self._channel_map[id]
 	if guild then
-		return guild._forum_channels:get(id)
-			or guild._text_channels:get(id)
-			or guild._voice_channels:get(id)
-			or guild._thread_channels:get(id)
-			or guild._categories:get(id)
-	else
-		return self._private_channels:get(id) or self._group_channels:get(id)
+		local channel = (guild._forum_channels and guild._forum_channels:get(id))
+			or (guild._text_channels and guild._text_channels:get(id))
+			or (guild._voice_channels and guild._voice_channels:get(id))
+			or (guild._thread_channels and guild._thread_channels:get(id))
+			or (guild._categories and guild._categories:get(id))
+		if channel then
+			return channel
+		end
 	end
+	return self._private_channels:get(id)
+		or self._group_channels:get(id)
+		or (self._forum_channels and self._forum_channels:get(id))
 end
 
 --[=[

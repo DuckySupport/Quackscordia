@@ -36,7 +36,7 @@ function Guild:__init(data, parent)
 	self._text_channels = Cache({}, GuildTextChannel, self)
 	self._voice_channels = Cache({}, GuildVoiceChannel, self)
 	self._forum_channels = Cache({}, GuildForumChannel, self)
-	self._thread_channels = Cache({}, GuildThreadChannel)
+	self._thread_channels = Cache({}, GuildThreadChannel, self)
 	self._categories = Cache({}, GuildCategoryChannel, self)
 	self._voice_states = {}
 	if not data.unavailable then

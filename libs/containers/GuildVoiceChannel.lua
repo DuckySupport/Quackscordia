@@ -6,14 +6,19 @@ and communicate via voice chat.
 
 local json = require('json')
 
-local GuildChannel = require('containers/abstract/GuildChannel')
+local TextChannel = require('containers/abstract/TextChannel')
 local VoiceConnection = require('voice/VoiceConnection')
 local TableIterable = require('iterables/TableIterable')
 
-local GuildVoiceChannel, get = require('class')('GuildVoiceChannel', GuildChannel)
+local GuildVoiceChannel, get = require('class')('GuildVoiceChannel', TextChannel)
 
 function GuildVoiceChannel:__init(data, parent)
-	GuildChannel.__init(self, data, parent)
+	TextChannel.__init(self, data, parent)
+	self.client._channel_map[self._id] = parent
+end
+
+function get.guild(self)
+	return self._parent
 end
 
 --[=[
