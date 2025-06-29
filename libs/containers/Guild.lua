@@ -239,7 +239,28 @@ end
 ]=]
 function Guild:getChannel(id)
 	id = Resolver.channelId(id)
-	return self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id)
+	local channel = self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id)
+	if channel then
+		return channel
+	else
+		local data, err = self.client._api:getChannel(id)
+		if data then
+			local t = data.type
+			if t == channelType.text or t == channelType.news then
+				return self._text_channels:_insert(data)
+			elseif t == channelType.voice then
+				return self._voice_channels:_insert(data)
+			elseif t == channelType.forum then
+				return self._forum_channels:_insert(data)
+			elseif t == channelType.category then
+				return self._categories:_insert(data)
+			else
+				return self.client:getChannel(id)
+			end
+		else
+			return nil, err
+		end
+	end
 end
 
 function Guild:getCategory(id)
@@ -856,7 +877,7 @@ end
 --[=[@p totalMemberCount number The total number of members that belong to this guild. This should always be
 greater than or equal to the total number of cached members.]=]
 function get.totalMemberCount(self)
-	return self._member_count
+	return self._member_count or #self._members or 0
 end
 
 --[=[@p verificationLevel number The guild's verification level setting. See the `verificationLevel`
