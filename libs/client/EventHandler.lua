@@ -532,7 +532,7 @@ function EventHandler.MESSAGE_CREATE(d, client)
 	local channel = getChannel(client, d)
 	if not channel then return end
 
-	if channel.guild and not channel.guild._members then
+	if channel.guild and not channel.guild._members and not THREAD_TYPES[channel.type] then
 		client:debug("Incomplete guild %s found for channel %s, fetching from API.", channel.guild.id, channel.id)
 		local fullGuildData, err = client._api:getGuild(channel.guild.id)
 		if fullGuildData then
@@ -543,7 +543,7 @@ function EventHandler.MESSAGE_CREATE(d, client)
 			end
 		else
 			client:warning("Could not fetch full guild %s to process message: %s", channel.guild.id, err)
-			return 
+			return
 		end
 	end
 

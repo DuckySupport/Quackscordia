@@ -27,7 +27,10 @@ function Message:__init(data, parent)
 	self._author = self.client._users:_insert(data.author)
 	if data.member then
 		data.member.user = data.author
-		self._parent.guild._members:_insert(data.member)
+		local guild = self.guild
+		if guild and guild._members then
+			guild._members:_insert(data.member)
+		end
 	end
 	self._timestamp = nil -- waste of space; can be calculated from Snowflake ID
 	if data.reactions and #data.reactions > 0 then
@@ -61,7 +64,10 @@ function Message:_loadMore(data)
 			mentions[user.id] = true
 			if user.member then
 				user.member.user = user
-				self._parent.guild._members:_insert(user.member)
+				local guild = self.guild
+				if guild and guild._members then
+					guild._members:_insert(user.member)
+				end
 			else
 				self.client._users:_insert(user)
 			end
@@ -669,7 +675,13 @@ end
 --[=[@p guild Guild/nil The guild in which this message was sent. This will not exist if the message
 was not sent in a guild text channel. Equivalent to `Message.channel.guild`.]=]
 function get.guild(self)
-	return self._parent.guild
+	if self._parent.guild then
+		return self._parent.guild
+	end
+	if self._parent._parent and self._parent._parent.guild then
+		return self._parent._parent.guild
+	end
+	return nil
 end
 
 --[=[@p member Member/nil The member object of the message's author. This will not exist if the message
