@@ -925,7 +925,17 @@ end
 
 --[=[@p ownerId string The Snowflake ID of the guild member that owns the guild.]=]
 function get.ownerId(self)
-	return self._owner_id
+	if self._owner_id then
+		return self._owner_id
+	end
+	local data, err = self.client._api:getGuild(self._id)
+	if data then
+		self:_load(data)
+		return self._owner_id
+	else
+		self:warning("Could not fetch full guild data for %s to get ownerId: %s", self._id, err)
+		return nil
+	end
 end
 
 --[=[@p afkChannelId string/nil The Snowflake ID of the channel that is used for AFK members, if one is set.]=]
