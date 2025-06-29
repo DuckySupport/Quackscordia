@@ -933,7 +933,7 @@ function get.ownerId(self)
 		self:_load(data)
 		return self._owner_id
 	else
-		self:warning("Could not fetch full guild data for %s to get ownerId: %s", self._id, err)
+		self.client:warning("Could not fetch full guild data for %s to get ownerId: %s", self._id, err)
 		return nil
 	end
 end
