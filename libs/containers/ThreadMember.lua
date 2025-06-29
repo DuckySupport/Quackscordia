@@ -32,7 +32,7 @@ function ThreadMember:__hash()
 end
 
 function ThreadMember:_loadMore(data)
-	if data.member then
+	if data.member and self._guild and self._guild._members then
 		self._member = self._guild._members:_insert(data.member)
 	end
 end
