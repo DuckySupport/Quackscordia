@@ -5,7 +5,6 @@ channels, and roles that represents one community.
 ]=]
 
 local Cache = require('iterables/Cache')
-local LimitedCache = require('iterables/LimitedCache')
 local Role = require('containers/Role')
 local Emoji = require('containers/Emoji')
 local Invite = require('containers/Invite')
@@ -32,24 +31,13 @@ local Guild, get = require('class')('Guild', Snowflake)
 
 function Guild:__init(data, parent)
 	Snowflake.__init(self, data, parent)
-
-	local limits = self.client._options.cacheLimits
-	local function createCache(name, constructor, cache_parent)
-		local limit = limits and limits[name]
-		if limit and limit > 0 then
-			return LimitedCache(limit, constructor, cache_parent)
-		else
-			return Cache({}, constructor, cache_parent)
-		end
-	end
-
-	self._roles = createCache('roles', Role, self)
-	self._members = createCache('members', Member, self)
-	self._text_channels = createCache('textChannels', GuildTextChannel, self)
-	self._voice_channels = createCache('voiceChannels', GuildVoiceChannel, self)
-	self._forum_channels = createCache('forumChannels', GuildForumChannel, self)
-	self._thread_channels = createCache('threadChannels', GuildThreadChannel)
-	self._categories = createCache('categories', GuildCategoryChannel, self)
+	self._roles = Cache({}, Role, self)
+	self._members = Cache({}, Member, self)
+	self._text_channels = Cache({}, GuildTextChannel, self)
+	self._voice_channels = Cache({}, GuildVoiceChannel, self)
+	self._forum_channels = Cache({}, GuildForumChannel, self)
+	self._thread_channels = Cache({}, GuildThreadChannel)
+	self._categories = Cache({}, GuildCategoryChannel, self)
 	self._voice_states = {}
 	if not data.unavailable then
 		return self:_makeAvailable(data)
@@ -239,28 +227,7 @@ end
 ]=]
 function Guild:getChannel(id)
 	id = Resolver.channelId(id)
-	local channel = self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id)
-	if channel then
-		return channel
-	else
-		local data, err = self.client._api:getChannel(id)
-		if data then
-			local t = data.type
-			if t == channelType.text or t == channelType.news then
-				return self._text_channels:_insert(data)
-			elseif t == channelType.voice then
-				return self._voice_channels:_insert(data)
-			elseif t == channelType.forum then
-				return self._forum_channels:_insert(data)
-			elseif t == channelType.category then
-				return self._categories:_insert(data)
-			else
-				return self.client:getChannel(id)
-			end
-		else
-			return nil, err
-		end
-	end
+	return self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id)
 end
 
 function Guild:getCategory(id)
@@ -877,7 +844,7 @@ end
 --[=[@p totalMemberCount number The total number of members that belong to this guild. This should always be
 greater than or equal to the total number of cached members.]=]
 function get.totalMemberCount(self)
-	return self._member_count or #self._members or 0
+	return self._member_count
 end
 
 --[=[@p verificationLevel number The guild's verification level setting. See the `verificationLevel`
@@ -925,17 +892,7 @@ end
 
 --[=[@p ownerId string The Snowflake ID of the guild member that owns the guild.]=]
 function get.ownerId(self)
-	if self._owner_id then
-		return self._owner_id
-	end
-	local data, err = self.client._api:getGuild(self._id)
-	if data then
-		self:_load(data)
-		return self._owner_id
-	else
-		self.client:warning("Could not fetch full guild data for %s to get ownerId: %s", self._id, err)
-		return nil
-	end
+	return self._owner_id
 end
 
 --[=[@p afkChannelId string/nil The Snowflake ID of the channel that is used for AFK members, if one is set.]=]

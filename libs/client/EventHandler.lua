@@ -34,28 +34,14 @@ local function getChannel(client, d)
 
 	local data = client._api:getChannel(d.channel_id)
 	if data then
-		local t = data.type
-		if t == channelType.private then
+		if data.type == channelType.private then
 			channel = client._private_channels:_insert(data)
-		elseif t == channelType.group then
+		elseif data.type == channelType.group then
 			channel = client._group_channels:_insert(data)
-		elseif THREAD_TYPES[t] then
+		elseif THREAD_TYPES[data.type] then
 			local parent_channel = getChannel(client, {channel_id = data.parent_id})
 			if parent_channel then
 				channel = parent_channel._thread_channels:_insert(data, parent_channel)
-			end
-		else
-			local guild = client._guilds:get(data.guild_id)
-			if guild then
-				if t == channelType.text or t == channelType.news then
-					channel = guild._text_channels:_insert(data)
-				elseif t == channelType.voice then
-					channel = guild._voice_channels:_insert(data)
-				elseif t == channelType.forum then
-					channel = guild._forum_channels:_insert(data)
-				elseif t == channelType.category then
-					channel = guild._categories:_insert(data)
-				end
 			end
 		end
 	end
@@ -64,7 +50,6 @@ end
 
 local EventHandler = setmetatable({}, {__index = function(self, k)
 	self[k] = function(_, _, shard)
-		if shard._client._options.suppressUnhandledEvents then return end
 		return shard:warning('Unhandled gateway event: %s', k)
 	end
 	return self[k]
