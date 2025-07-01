@@ -166,8 +166,10 @@ function API:request(method, endpoint, payload, query, files)
 
 	local mutex = self._mutexes[route(method, endpoint)]
 
+	print("locking mutex")
 	mutex:lock()
 	local data, err, delay = self:commit(method, url, req, payload, 0)
+	print("mutex unlocking after", delay)
 	mutex:unlockAfter(delay)
 
 	if data then
