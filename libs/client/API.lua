@@ -134,8 +134,9 @@ function API:request(method, endpoint, payload, query, files)
 
     -- --- Rate Limit Handling ---
     -- Check if this route is currently in a cooldown period
-    if mutex.ratelimit_reset_after and os.mtime() < mutex.ratelimit_reset_after then
-        local wait_time = mutex.ratelimit_reset_after - os.mtime()
+    -- Accessing _ratelimit_reset_after
+    if mutex._ratelimit_reset_after and os.mtime() < mutex._ratelimit_reset_after then
+        local wait_time = mutex._ratelimit_reset_after - os.mtime()
         if wait_time > 0 then
             self._client:warning(f("Waiting for route %s due to rate limit for %i ms", route_key, wait_time))
             sleep(wait_time / 1000) -- Yield the current coroutine for the remaining cooldown
@@ -144,7 +145,6 @@ function API:request(method, endpoint, payload, query, files)
     -- --- End Rate Limit Handling ---
 
     -- Acquire the mutex for the actual request execution
-    -- This ensures only one request per route is in flight at a time
     print(f("locking mutex for %s", route_key))
     mutex:lock()
 
@@ -189,13 +189,9 @@ function API:request(method, endpoint, payload, query, files)
     mutex:unlock()
 
     -- Store the next reset time if provided by Discord
-    -- `api_delay` is effectively `res['x-ratelimit-reset-after']` or `data.retry_after`
-    if api_delay then -- Assuming api_delay from commit is the *reset_after* or *retry_after* value
-        -- We need to differentiate between `x-ratelimit-reset-after` (for 2xx responses)
-        -- and `retry_after` (for 429 responses).
-        -- Let's modify `commit` to return `reset_after` directly from headers or `retry_after` from 429 body.
-        -- For now, assuming `api_delay` is what we need to wait for.
-        mutex.ratelimit_reset_after = os.mtime() + api_delay
+    -- Assigning to _ratelimit_reset_after
+    if api_delay then
+        mutex._ratelimit_reset_after = os.mtime() + api_delay
     end
 
     if data then
