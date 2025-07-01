@@ -236,7 +236,10 @@ function API:commit(method, url, req, payload, retries)
 
 		end
 
-		client:error('%i - %s : %s %s', res.code, res.reason, msg)
+		client:error('%i - %s : %s %s', res.code, res.reason, method, url)
+		if res.code == 400 then
+			p("Bad Request", msg)
+		end
 		return nil, msg, delay
 
 	end
