@@ -1,3 +1,4 @@
+local uv = require("uv")
 local json = require('json')
 local timer = require('timer')
 local http = require('coro-http')
@@ -135,8 +136,8 @@ function API:request(method, endpoint, payload, query, files)
     -- --- Rate Limit Handling ---
     -- Check if this route is currently in a cooldown period
     -- Accessing _ratelimit_reset_after
-    if mutex._ratelimit_reset_after and os.mtime() < mutex._ratelimit_reset_after then
-        local wait_time = mutex._ratelimit_reset_after - os.mtime()
+    if mutex._ratelimit_reset_after and uv.now() < mutex._ratelimit_reset_after then
+        local wait_time = mutex._ratelimit_reset_after - uv.now()
         if wait_time > 0 then
             self._client:warning(f("Waiting for route %s due to rate limit for %i ms", route_key, wait_time))
             sleep(wait_time / 1000) -- Yield the current coroutine for the remaining cooldown
@@ -191,7 +192,7 @@ function API:request(method, endpoint, payload, query, files)
     -- Store the next reset time if provided by Discord
     -- Assigning to _ratelimit_reset_after
     if api_delay then
-        mutex._ratelimit_reset_after = os.mtime() + api_delay
+        mutex._ratelimit_reset_after = uv.now() + api_delay
     end
 
     if data then
