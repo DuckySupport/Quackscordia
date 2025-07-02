@@ -146,7 +146,6 @@ function API:request(method, endpoint, payload, query, files)
     -- --- End Rate Limit Handling ---
 
     -- Acquire the mutex for the actual request execution
-    print(f("locking mutex for %s", route_key))
     mutex:lock()
 
     local url = BASE_URL .. endpoint
@@ -186,7 +185,6 @@ function API:request(method, endpoint, payload, query, files)
     local data, err, api_delay = self:commit(method, url, req, payload, 0)
 
     -- Release the mutex immediately after the request completes
-    print(f("mutex unlocking immediately for %s", route_key))
     mutex:unlock()
 
     -- Store the next reset time if provided by Discord
@@ -266,7 +264,7 @@ function API:commit(method, url, req, payload, retries)
 
         client:error('%i - %s : %s %s', res.code, res.reason, method, url)
         if res.code == 400 then
-            p("Bad Request", msg)
+            p("400 Bad Request", msg)
         end
         -- For failed requests, return the retry_after or calculated delay
         return nil, msg, reset_after_ms
