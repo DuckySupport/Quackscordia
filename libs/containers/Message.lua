@@ -74,7 +74,7 @@ function Message:_loadMore(data)
 		end
 		self._referencedMessage = self._parent._messages:_insert(data.referenced_message)
 	elseif data.message_snapshots and data.message_snapshots ~= null then
-		self._referencedMessage = self._parent._messages:_insert(data.message_snapshots[1])
+		self._referencedMessage = self._parent._messages:_insert(data.message_snapshots[1].message)
 	end
 
 	local content = data.content
