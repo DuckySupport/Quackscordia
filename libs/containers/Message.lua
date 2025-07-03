@@ -73,8 +73,8 @@ function Message:_loadMore(data)
 			self._reply_target = data.referenced_message.author.id
 		end
 		self._referencedMessage = self._parent._messages:_insert(data.referenced_message)
-	elseif data.message_snapshots and data.message_snapshots ~= null then
-		self._referencedMessage = self._parent._messages:_insert(data.message_snapshots[1].message)
+	elseif data.message_reference and data.message_reference ~= null then
+		self._referencedMessage = self.client:getGuild(data.message_reference.guild_id):getChannel(data.message_reference.channel_id):getMessage(data.message_reference.message_id)
 	end
 
 	local content = data.content
