@@ -77,7 +77,7 @@ function Message:_loadMore(data)
 		local guild = self.client:getGuild(data.message_reference.guild_id)
 		local channel = guild and guild:getChannel(data.message_reference.channel_id)
 		local message = channel and channel:getMessage(data.message_reference.message_id)
-		self._referencedMessage = message or nil
+		self._fowardedMessage = message or nil
 	end
 
 	local content = data.content
@@ -689,6 +689,12 @@ end
 this current message references as seen in replies.]=]
 function get.referencedMessage(self)
 	return self._referencedMessage
+end
+
+--[=[@p forwardedMessage Message/nil If available, the fowarded message that
+this current message references.]=]
+function get.forwardedMessage(self)
+	return self._forwardedMessage
 end
 
 --[=[@p link string URL that can be used to jump-to the message in the Discord client.]=]
