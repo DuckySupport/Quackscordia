@@ -41,7 +41,7 @@ function table.concatFn(tbl, connector, fn)
 
 	for i, v in pairs(tbl) do
 		c = c + 1
-		ret = ret .. ((fn and fn(v, i)) or tostring(v)) .. ((c < table.count(tbl) and connector) or "")
+		ret = ret .. fn(v, i) .. ((c < table.count(tbl) and connector) or "")
 	end
 
 	return ret
