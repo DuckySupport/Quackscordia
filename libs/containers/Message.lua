@@ -24,7 +24,6 @@ local Message, get = require('class')('Message', Snowflake)
 
 function Message:__init(data, parent)
 	Snowflake.__init(self, data, parent)
-	self._raw = data
 	self._author = self.client._users:_insert(data.author)
 	if data.member then
 		data.member.user = data.author
@@ -74,6 +73,8 @@ function Message:_loadMore(data)
 			self._reply_target = data.referenced_message.author.id
 		end
 		self._referencedMessage = self._parent._messages:_insert(data.referenced_message)
+	elseif data.message_snapshots and data.message_snapshots ~= null then
+		self._referencedMessage = self._parent._messages:_insert(data.message_snapshots[1])
 	end
 
 	local content = data.content
