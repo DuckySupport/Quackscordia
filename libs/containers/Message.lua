@@ -24,6 +24,7 @@ local Message, get = require('class')('Message', Snowflake)
 
 function Message:__init(data, parent)
 	Snowflake.__init(self, data, parent)
+	self._raw = data
 	self._author = self.client._users:_insert(data.author)
 	if data.member then
 		data.member.user = data.author
