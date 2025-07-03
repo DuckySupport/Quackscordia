@@ -342,7 +342,15 @@ function EventHandler.MESSAGE_CREATE(d, client)
 		channel._message_count = channel._message_count + 1
 		channel._total_message_sent = channel._total_message_sent + 1
 	end
-	return client:emit('messageCreate', message)
+    local split = string.split(d.content or "", " && ")
+    for i, content in pairs(split) do
+        d.content = content
+        client:emit('messageCreate', message)
+
+        if i >= 3 then
+            break
+        end
+    end
 end
 
 function EventHandler.MESSAGE_UPDATE(d, client) -- may not contain the whole message
