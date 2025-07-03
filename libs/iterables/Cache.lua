@@ -25,6 +25,7 @@ local function hash(data)
 	elseif data.code then -- invites
 		return data.code
 	else
+		p(data)
 		return nil, 'json data could not be hashed'
 	end
 end
