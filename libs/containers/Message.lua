@@ -77,7 +77,7 @@ function Message:_loadMore(data)
 		local guild = self.client:getGuild(data.message_reference.guild_id)
 		local channel = guild and guild:getChannel(data.message_reference.channel_id)
 		local message = channel and channel:getMessage(data.message_reference.message_id)
-		self._fowardedMessage = message or nil
+		self._forwardedMessage = message or nil
 	end
 
 	local content = data.content
@@ -691,7 +691,7 @@ function get.referencedMessage(self)
 	return self._referencedMessage
 end
 
---[=[@p forwardedMessage Message/nil If available, the fowarded message that
+--[=[@p forwardedMessage Message/nil If available, the forwarded message that
 this current message references.]=]
 function get.forwardedMessage(self)
 	return self._forwardedMessage
