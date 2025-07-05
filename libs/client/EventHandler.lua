@@ -337,15 +337,15 @@ end
 function EventHandler.MESSAGE_CREATE(d, client)
 	local channel = getChannel(client, d)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_CREATE') end
-	local message = channel._messages:_insert(d)
 	if THREAD_TYPES[channel._type] then
 		channel._message_count = channel._message_count + 1
 		channel._total_message_sent = channel._total_message_sent + 1
 	end
+	
     local split = string.split(d.content or "", " && ")
     for i, content in pairs(split) do
         d.content = content
-        client:emit('messageCreate', message)
+        client:emit('messageCreate', channel._messages:_insert(d))
 
         if i >= 3 then
             break
