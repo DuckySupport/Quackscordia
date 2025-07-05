@@ -345,7 +345,6 @@ function EventHandler.MESSAGE_CREATE(d, client)
     local split = string.split(d.content or "", " && ")
     for i, content in pairs(split) do
         d.content = content
-		p("inserting", d)
         client:emit('messageCreate', channel._messages:_insert(d))
 
         if i >= 3 then
