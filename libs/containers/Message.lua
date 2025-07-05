@@ -392,52 +392,41 @@ end
 @r Message
 @d Equivalent to `Message.channel:send(content)`.
 ]=]
-function Message:reply(content, reference, mention)
-    if reference == nil then reference = true end
+function Message:reply(content, silent, reference, mention)
+	reference = ((reference == nil) and true) or false
+	mention = not not mention
         
    	if type(content) == "table" and reference then
-        content.reference = {message = self.id, mention = not not mention}
+        content.reference = {message = self.id, mention = mention}
     elseif type(content) == "string" and reference then
-        content = {content = content, reference = {message = self.id, mention = not not mention}}
+        content = {content = content, reference = {message = self.id, mention = mention}}
     end
-	return self._parent:send(content)
+	return self._parent:send(content, silent)
 end
 
-function Message:success(content, emoji)
+function Message:success(content, silent, emoji)
 	emoji = (emoji and type(emoji) == "string") or _G.emojis.success
-	-- if self._user.id == self.client.id then
-	-- 	return self:update({embed = {description = emojis .. " " .. content, color = _G.colors.success, components = {}}})
-	-- end
-	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.success}})
+	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.success}}, silent)
 end
 
-function Message:warning(content, emoji)
+function Message:warning(content, silent, emoji)
 	emoji = (emoji and type(emoji) == "string") or _G.emojis.warning
-	-- if self._user.id == self.client.id then
-	-- 	return self:update({embed = {description = emojis .. " " .. content, color = _G.colors.warning, components = {}}})
-	-- end
-	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.warning}})
+	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.warning}}, silent)
 end
 
-function Message:fail(content, emoji)
+function Message:fail(content, silent, emoji)
 	emoji = (emoji and type(emoji) == "string") or _G.emojis.fail
-	-- if self._user.id == self.client.id then
-	-- 	return self:update({embed = {description = emojis .. " " .. content, color = _G.colors.fail, components = {}}})
-	-- end
-	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.fail}})
+	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.fail}}, silent)
 end
 
-function Message:heavyred(content, emoji)
+function Message:heavyred(content, silent, emoji)
 	emoji = (emoji and type(emoji) == "string") or _G.emojis.error
-	-- if self._user.id == self.client.id then
-	-- 	return self:update({embed = {description = emojis .. " " .. content, color = _G.colors.heavyred, components = {}}})
-	-- end
-	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.heavyred}})
+	return self:reply({embed = {description = emoji .. " " .. content, color = _G.colors.heavyred}}, silent)
 end
     
-function Message:loading(content)
+function Message:loading(content, silent)
     content = (content and (" " .. content)) or ""
-    return self:reply({embed = {description = _G.emojis.loading .. content, color = _G.colors.blank}})
+    return self:reply({embed = {description = _G.emojis.loading .. content, color = _G.colors.blank}}, silent)
 end
 
 --[=[

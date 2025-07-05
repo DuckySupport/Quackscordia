@@ -251,10 +251,8 @@ end
 sent as the message content. If it is a table, more advanced formatting is
 allowed. See [[managing messages]] for more information.
 ]=]
-function TextChannel:send(content)
-    local sentContent = nil
-
-	local data, err
+function TextChannel:send(content, silent)
+    local data, err
 
 	if type(content) == 'table' then
 
@@ -332,7 +330,7 @@ function TextChannel:send(content)
 			allowedMentions.replied_user = not not tbl.reference.mention
 		end
 
-		if tbl.silent then
+		if tbl.silent or silent then
 			allowedMentions = {parse = {}}
 		end
 
@@ -350,19 +348,6 @@ function TextChannel:send(content)
 		if tbl.components then
 			components = tbl.components
 		end
-                            
-        sentContent = {
-			content = content,
-			tts = tbl.tts,
-			nonce = tbl.nonce,
-			embeds = embeds,
-			message_reference = refMessage,
-			allowed_mentions = allowedMentions,
-			sticker_ids = sticker,
-			flags = tbl.silent and 2^12 or nil,
-			poll = poll or nil,
-			components = components
-		}
 
 		data, err = self.client._api:createMessage(self._id, {
 			content = content,
@@ -370,18 +355,15 @@ function TextChannel:send(content)
 			nonce = tbl.nonce,
 			embeds = embeds,
 			message_reference = refMessage,
-			allowed_mentions = refMention,
+			allowed_mentions = allowedMentions,
 			sticker_ids = sticker,
-			flags = tbl.silent and 2^12 or nil,
+			flags = tbl.suppress and 2^12 or nil,
 			poll = poll or nil,
 			components = components
 		}, files)
 
 	else
-
-        sentContent = {content = content}
 		data, err = self.client._api:createMessage(self._id, {content = content})
-
 	end
 
 	if data then
