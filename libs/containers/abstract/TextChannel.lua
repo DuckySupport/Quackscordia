@@ -252,8 +252,6 @@ sent as the message content. If it is a table, more advanced formatting is
 allowed. See [[managing messages]] for more information.
 ]=]
 function TextChannel:send(content)
-                        
-    local originalContent = (type(content) == "table" and table.deepcopy(content or {})) or tostring(content)
     local sentContent = nil
 
 	local data, err
@@ -322,13 +320,20 @@ function TextChannel:send(content)
 			end
 		end
 
-		local refMessage, refMention
+		local refMessage
+		local allowedMentions = {
+			parse = {'users', 'roles', 'everyone'}
+		}
+		if tbl.allowed_mentions or tbl.allowedMentions then
+			allowedMentions = tbl.allowed_mentions or tbl.allowedMentions
+		end
 		if tbl.reference then
 			refMessage = {message_id = Resolver.messageId(tbl.reference.message)}
-			refMention = {
-				parse = {'users', 'roles', 'everyone'},
-				replied_user = not not tbl.reference.mention,
-			}
+			allowedMentions.replied_user = not not tbl.reference.mention
+		end
+
+		if tbl.silent then
+			allowedMentions = {parse = {}}
 		end
 
 		local sticker
@@ -352,7 +357,7 @@ function TextChannel:send(content)
 			nonce = tbl.nonce,
 			embeds = embeds,
 			message_reference = refMessage,
-			allowed_mentions = refMention,
+			allowed_mentions = allowedMentions,
 			sticker_ids = sticker,
 			flags = tbl.silent and 2^12 or nil,
 			poll = poll or nil,
@@ -382,10 +387,6 @@ function TextChannel:send(content)
 	if data then
 		return self._messages:_insert(data)
 	else
-        p("TextChannel:send originalContent", originalContent)
-        p("sentContent", sentContent)
-        p("data", data)
-        p("err", err)
 		return nil, err
 	end
 

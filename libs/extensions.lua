@@ -173,7 +173,11 @@ end
 function table.find(tbl, val)
     if (not tbl) or (not val) then return end
 	for i, v in pairs(tbl) do
-		if v == val then
+		if type(val) == "function" then
+			if val(v, i) then
+				return v, i
+			end
+		elseif v == val then
 			return v, i
 		end
 	end
