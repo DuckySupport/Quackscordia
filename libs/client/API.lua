@@ -181,7 +181,7 @@ function API:request(method, endpoint, payload, query, files)
 end
 
 function API:commit(method, url, req, payload, retries)
-    local debugInfo = debug.getinfo(2, "Sl")
+    local debugInfo = debug.getinfo(3, "Sl")
 	local origin = debugInfo.short_src .. ":" .. debugInfo.currentline
 
 	local client = self._client
