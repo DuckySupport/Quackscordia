@@ -126,187 +126,128 @@ function API:authenticate(token)
 end
 
 function API:request(method, endpoint, payload, query, files)
-    local _, main = running()
-    if main then
-        return error('Cannot make HTTP request outside of a coroutine', 2)
-    end
 
-    local route_key = route(method, endpoint)
-    local mutex = self._mutexes[route_key]
-    local client = self._client
+	local _, main = running()
+	if main then
+		return error('Cannot make HTTP request outside of a coroutine', 2)
+	end
 
-    -- --- Rate Limit Handling ---
-    -- Global rate limit check (before route-specific and mutex)
-    local global_wait_time = self._global_ratelimit_reset_after - uv.now()
-    if global_wait_time > 0 then
-        client:warning(f("Waiting for global rate limit for %i ms", global_wait_time))
-        sleep(global_wait_time / 1000)
-    end
+	local url = BASE_URL .. endpoint
 
-    -- Check if this route is currently in a cooldown period *before* acquiring mutex
-    -- This allows other coroutines waiting for different routes to proceed.
-    if mutex._ratelimit_reset_after and uv.now() < mutex._ratelimit_reset_after then
-        local wait_time = mutex._ratelimit_reset_after - uv.now()
-        if wait_time > 0 then
-            client:warning(f("Waiting for route %s due to rate limit for %i ms", route_key, wait_time))
-            sleep(wait_time / 1000) -- Yield the current coroutine for the remaining cooldown
-        end
-    end
-    -- --- End Rate Limit Handling ---
+	if query and next(query) then
+		local buf = {url}
+		for k, v in pairs(query) do
+			insert(buf, #buf == 1 and '?' or '&')
+			insert(buf, urlencode(k))
+			insert(buf, '=')
+			insert(buf, urlencode(v))
+		end
+		url = concat(buf)
+	end
 
-    -- Acquire the mutex for the actual request execution
-    -- We wait *after* any necessary sleep to avoid holding the mutex during an idle period.
-    mutex:lock()
+	local req = {
+		{'User-Agent', USER_AGENT},
+		{'Authorization', self._token},
+	}
 
-    local url = BASE_URL .. endpoint
+	if API_VERSION < 8 then
+		insert(req, {'X-RateLimit-Precision', PRECISION})
+	end
 
-    if query and next(query) then
-        local buf = {url}
-        for k, v in pairs(query) do
-            insert(buf, #buf == 1 and '?' or '&')
-            insert(buf, urlencode(k))
-            insert(buf, '=')
-            insert(buf, urlencode(v))
-        end
-        url = concat(buf)
-    end
+	if payloadRequired[method] then
+		payload = payload and encode(payload) or '{}'
+		if files and next(files) then
+			local boundary
+			payload, boundary = attachFiles(payload, files)
+			insert(req, {'Content-Type', MULTIPART .. boundary})
+		else
+			insert(req, {'Content-Type', JSON})
+		end
+		insert(req, {'Content-Length', #payload})
+	end
 
-    local req = {
-        {'User-Agent', USER_AGENT},
-        {'Authorization', self._token},
-    }
+	local mutex = self._mutexes[route(method, endpoint)]
 
-    if API_VERSION < 8 then
-        insert(req, {'X-RateLimit-Precision', PRECISION})
-    end
+	mutex:lock()
+	local data, err, delay = self:commit(method, url, req, payload, 0)
+	mutex:unlockAfter(delay)
 
-    if payloadRequired[method] then
-        payload = payload and encode(payload) or '{}'
-        if files and next(files) then
-            local boundary
-            payload, boundary = attachFiles(payload, files)
-            insert(req, {'Content-Type', MULTIPART .. boundary})
-        else
-            insert(req, {'Content-Type', JSON})
-        end
-        insert(req, {'Content-Length', #payload})
-    end
+	if data then
+		return data
+	else
+		return nil, err
+	end
 
-    -- Pass the mutex to commit so it can release and re-acquire if needed (e.g., global rate limit)
-    local data, err, api_delay, is_global_ratelimit = self:commit(method, url, req, payload, 0, mutex)
-
-    -- Release the mutex immediately after the request completes or if a retry is handled internally by commit.
-    -- If commit fully handled a global rate limit by sleeping and then retrying internally,
-    -- the mutex would still be held when it returns, so we explicitly unlock here.
-    mutex:unlock()
-
-    -- Store the next reset time if provided by Discord for this route
-    if api_delay then
-        mutex._ratelimit_reset_after = uv.now() + api_delay
-    end
-
-    -- If the commit function indicated a global rate limit, update the global timestamp
-    if is_global_ratelimit and api_delay then
-        self._global_ratelimit_reset_after = uv.now() + api_delay
-    end
-
-    if data then
-        return data
-    else
-        return nil, err
-    end
 end
 
-function API:commit(method, url, req, payload, retries, mutex)
-    local client = self._client
-    local options = client._options
+function API:commit(method, url, req, payload, retries)
 
-    local success, res, msg = pcall(request, method, url, req, payload)
+	local client = self._client
+	local options = client._options
+	local delay = options.routeDelay
 
-    if not success then
-        -- Network error, can't even make the request.
-        -- Return a small delay to prevent immediate re-attempts without a pause.
-        -- The mutex is still held here, but for network errors, we generally want to retry quickly.
-        client:error(f("Network request failed: %s", res))
-        if retries < options.maxRetries then
-            local wait_time = options.routeDelay + random(2000) -- Add jitter
-            client:warning(f("Retrying network request after %i ms", wait_time))
-            sleep(wait_time / 1000)
-            return self:commit(method, url, req, payload, retries + 1, mutex)
-        else
-            return nil, f("Network error after %i retries: %s", options.maxRetries, res), 0
-        end
-    end
+	local success, res, msg = pcall(request, method, url, req, payload)
 
-    for i, v in ipairs(res) do
-        res[v[1]:lower()] = v[2]
-        res[i] = nil
-    end
+	if not success then
+		return nil, res, delay
+	end
 
-    local data = res['content-type'] and res['content-type']:find(JSON, 1, true) and decode(msg, 1, null) or msg
-    local reset_after_ms = 0
-    local is_global_ratelimit = false
+	for i, v in ipairs(res) do
+		res[v[1]:lower()] = v[2]
+		res[i] = nil
+	end
 
-    -- Discord can send X-RateLimit-Global for global rate limits
-    if res['x-ratelimit-global'] == 'true' then
-        is_global_ratelimit = true
-    end
+	if res['x-ratelimit-remaining'] == '0' then
+		delay = max(1000 * res['x-ratelimit-reset-after'], delay)
+	end
 
-    -- Always prioritize X-RateLimit-Reset-After or retry_after
-    if res['x-ratelimit-reset-after'] then
-        reset_after_ms = max(reset_after_ms, 1000 * tonumber(res['x-ratelimit-reset-after']))
-    end
+	local data = res['content-type'] == JSON and decode(msg, 1, null) or msg
 
-    if res.code < 300 then
-        client:debug('%i - %s : %s %s', res.code, res.reason, method, url)
-        -- For successful requests, return the reset_after from headers
-        return data, nil, reset_after_ms, is_global_ratelimit
+	if res.code < 300 then
 
-    else
-        -- Error handling
-        if type(data) == 'table' then
-            local retry = false
-            if res.code == 429 then
-                reset_after_ms = data.retry_after or 0 -- Discord returns this in ms already
-                retry = retries < options.maxRetries
-                is_global_ratelimit = data.global or false -- Check for global rate limit specifically
-            elseif res.code >= 500 and res.code < 600 then -- 5xx server errors
-                -- For 5xx errors, we calculate a delay for retry
-                reset_after_ms = (options.routeDelay or 1000) * (2 ^ retries) + random(1000) -- Exponential backoff with jitter
-                retry = retries < options.maxRetries
-            end
+		client:debug('%i - %s : %s %s', res.code, res.reason, method, url)
+		return data, nil, delay
 
-            if retry then
-                client:warning('%i - %s : retrying after %i ms : %s %s', res.code, res.reason, reset_after_ms, method, url)
-                -- Release the mutex before sleeping for a retry, especially for 429s.
-                -- Re-acquire it after the sleep and before the next commit attempt.
-                if mutex then mutex:unlock() end
-                sleep(reset_after_ms / 1000)
-                if mutex then mutex:lock() end
-                return self:commit(method, url, req, payload, retries + 1, mutex)
-            end
+	else
 
-            if data.code and data.message then
-                msg = f('HTTP Error %i : %s', data.code, data.message)
-            else
-                msg = f('HTTP Error %i : %s', res.code, res.reason) -- Fallback if no specific Discord error
-            end
-            if data.errors then
-                msg = parseErrors({msg}, data.errors)
-            end
-        else
-            msg = f('HTTP Error %i : %s - %s', res.code, res.reason, msg)
-        end
+		if type(data) == 'table' then
 
-        client:error('%i - %s : %s %s', res.code, res.reason, method, url)
+			local retry
+			if res.code == 429 then
+                p("429 Too Many Requests", data)
+				delay = data.retry_after
+				retry = retries < options.maxRetries
+			elseif res.code == 502 then
+				delay = delay + random(2000)
+				retry = retries < options.maxRetries
+			end
+
+			if retry and delay then
+				client:warning('%i - %s : retrying after %i ms : %s %s', res.code, res.reason, delay, method, url)
+				sleep(delay)
+				return self:commit(method, url, req, payload, retries + 1)
+			end
+
+			if data.code and data.message then
+				msg = f('HTTP Error %i : %s', data.code, data.message)
+			else
+				msg = 'HTTP Error'
+			end
+			if data.errors then
+				msg = parseErrors({msg}, data.errors)
+			end
+
+		end
+
+		client:error('%i - %s : %s %s', res.code, res.reason, method, url)
         if res.code == 400 then
-            p("400 Bad Request", msg) -- Consider changing 'p' to client:error or similar
+            p("400 Bad Request", msg)
         end
-        -- For failed requests, return the calculated delay and global flag
-        return nil, msg, reset_after_ms, is_global_ratelimit
-    end
-end
+		return nil, msg, delay
 
+	end
+
+end
 -- start of auto-generated methods --
 
 function API:getGuildAuditLog(guild_id, query)
