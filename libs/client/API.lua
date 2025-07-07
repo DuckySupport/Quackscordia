@@ -207,7 +207,7 @@ function API:commit(method, url, req, payload, retries)
 
 	if res.code < 300 then
 
-		client:debug('%i - %s : %s %s', res.code, res.reason, method, url)
+		client:debug('%i - %s : %s %s %s', res.code, res.reason, origin, method, url)
 		return data, nil, delay
 
 	else
@@ -216,7 +216,6 @@ function API:commit(method, url, req, payload, retries)
 
 			local retry
 			if res.code == 429 then
-                p("429 Too Many Requests", origin, data)
 				delay = data.retry_after
 				retry = retries < options.maxRetries
 			elseif res.code == 502 then
@@ -225,7 +224,7 @@ function API:commit(method, url, req, payload, retries)
 			end
 
 			if retry and delay then
-				client:warning('%i - %s : retrying after %i ms : %s %s', res.code, res.reason, delay, method, url)
+				client:warning('%i - %s : retrying after %i ms : %s', res.code, res.reason, delay, origin)
 				sleep(delay)
 				return self:commit(method, url, req, payload, retries + 1)
 			end
