@@ -244,7 +244,7 @@ function API:commit(method, url, req, payload, retries)
 		client:error('%i - %s : %s %s', res.code, res.reason, method, url)
         if res.code == 400 then
             p("400 Bad Request", origin, msg)
-        elseif res.code == "404" then
+        elseif res.code == 404 then
             p("404 Not Found", origin, msg)
         end
 		return nil, msg, delay
