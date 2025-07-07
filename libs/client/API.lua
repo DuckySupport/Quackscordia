@@ -181,7 +181,13 @@ function API:request(method, endpoint, payload, query, files)
 end
 
 function API:commit(method, url, req, payload, retries)
-    local debugInfo = debug.getinfo(4, "Sl")
+    local debugInfo
+    for i = 1, 10 do
+        debugInfo = debug.getinfo(i, "Sl")
+        if (not debugInfo.short_src:lower():find("discordia")) and (debugInfo.what ~= "C") then
+            break
+        end
+    end
 	local origin = (debugInfo and (debugInfo.short_src .. ":" .. debugInfo.currentline)) or nil
 
 	local client = self._client
