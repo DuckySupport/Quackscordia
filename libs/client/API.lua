@@ -181,6 +181,8 @@ function API:request(method, endpoint, payload, query, files)
 end
 
 function API:commit(method, url, req, payload, retries)
+    local debugInfo = debug.getinfo(2, "Sl")
+	local origin = debugInfo.short_src .. ":" .. debugInfo.currentline
 
 	local client = self._client
 	local options = client._options
@@ -214,7 +216,7 @@ function API:commit(method, url, req, payload, retries)
 
 			local retry
 			if res.code == 429 then
-                p("429 Too Many Requests", data)
+                p("429 Too Many Requests", origin, data)
 				delay = data.retry_after
 				retry = retries < options.maxRetries
 			elseif res.code == 502 then
@@ -241,7 +243,9 @@ function API:commit(method, url, req, payload, retries)
 
 		client:error('%i - %s : %s %s', res.code, res.reason, method, url)
         if res.code == 400 then
-            p("400 Bad Request", msg)
+            p("400 Bad Request", origin, msg)
+        elseif res.code == "404" then
+            p("404 Not Found", origin, msg)
         end
 		return nil, msg, delay
 
