@@ -200,6 +200,10 @@ function API:commit(method, url, req, payload, retries)
 		return nil, res, delay
 	end
 
+    if res.code == 429 then
+        p("429 Too Many Requests", res, msg)
+    end
+
 	for i, v in ipairs(res) do
 		res[v[1]:lower()] = v[2]
 		res[i] = nil
