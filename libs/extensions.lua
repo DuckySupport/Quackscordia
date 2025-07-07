@@ -34,6 +34,15 @@ function table.count(tbl)
 	return n
 end
 
+function table.deepcount(tbl)
+    if (not tbl) then return 0 end
+	local n = 0
+	for _, v in pairs(tbl) do
+		n = type(v) == 'table' and n + table.deepcount(v) or n + 1
+	end
+	return n
+end
+
 function table.concatFn(tbl, connector, fn)
     if (not tbl) or (not connector) or (not fn) then return "" end
 	local ret = ""
@@ -45,15 +54,6 @@ function table.concatFn(tbl, connector, fn)
 	end
 
 	return ret
-end
-
-function table.deepcount(tbl)
-    if (not tbl) then return 0 end
-	local n = 0
-	for _, v in pairs(tbl) do
-		n = type(v) == 'table' and n + table.deepcount(v) or n + 1
-	end
-	return n
 end
 
 function table.copy(tbl)
@@ -181,6 +181,18 @@ function table.find(tbl, val)
 			return v, i
 		end
 	end
+end
+
+function table.delete(tbl, val)
+	if (not tbl) or (not val) then return false end
+	for i, v in pairs(tbl) do
+		if (type(val == "function") and val(v)) or (type(val) ~= "function" and (i == val or v == val)) then
+			table.remove(tbl, i)
+			return true
+		end
+	end
+
+	return false
 end
 
 local string = {}
