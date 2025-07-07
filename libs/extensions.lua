@@ -186,7 +186,7 @@ end
 function table.delete(tbl, val)
 	if (not tbl) or (not val) then return false end
 	for i, v in pairs(tbl) do
-		if (type(val == "function") and val(v)) or (type(val) ~= "function" and (i == val or v == val)) then
+		if (type(val) == "function" and val(v)) or (type(val) ~= "function" and (i == val or v == val)) then
 			table.remove(tbl, i)
 			return true
 		end
