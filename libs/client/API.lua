@@ -181,8 +181,8 @@ function API:request(method, endpoint, payload, query, files)
 end
 
 function API:commit(method, url, req, payload, retries)
-    local debugInfo = debug.getinfo(3, "Sl")
-	local origin = debugInfo.short_src .. ":" .. debugInfo.currentline
+    local debugInfo = debug.getinfo(4, "Sl")
+	local origin = (debugInfo and (debugInfo.short_src .. ":" .. debugInfo.currentline)) or nil
 
 	local client = self._client
 	local options = client._options
