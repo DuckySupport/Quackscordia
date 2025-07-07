@@ -252,6 +252,7 @@ sent as the message content. If it is a table, more advanced formatting is
 allowed. See [[managing messages]] for more information.
 ]=]
 function TextChannel:send(content, silent)
+	p("TextChannel:send", content)
     local data, err
 
 	if type(content) == 'table' then
@@ -348,8 +349,8 @@ function TextChannel:send(content, silent)
 		if tbl.components then
 			components = tbl.components
 		end
-
-		data, err = self.client._api:createMessage(self._id, {
+		
+		local tosend = {
 			content = content,
 			tts = tbl.tts,
 			nonce = tbl.nonce,
@@ -360,7 +361,11 @@ function TextChannel:send(content, silent)
 			flags = tbl.suppress and 2^12 or nil,
 			poll = poll or nil,
 			components = components
-		}, files)
+		}
+
+		p("tosend", tosend)
+
+		data, err = self.client._api:createMessage(self._id, tosend, files)
 
 	else
 		data, err = self.client._api:createMessage(self._id, {content = content})
