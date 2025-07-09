@@ -53,12 +53,8 @@ function GuildVoiceChannel:join()
 
 	local connection = self._connection
 
-	if connection then
-
-		if connection._ready then
-			return connection
-		end
-
+	if connection and connection._ready then
+		return connection
 	else
 
 		local guild = self._parent
