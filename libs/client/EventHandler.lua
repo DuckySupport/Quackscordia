@@ -577,6 +577,8 @@ function EventHandler.VOICE_STATE_UPDATE(d, client)
 end
 
 function EventHandler.VOICE_SERVER_UPDATE(d, client)
+	client:info('Raw VOICE_SERVER_UPDATE token received: %s', d.token)
+	
     local guild = client._guilds:get(d.guild_id)
     if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_SERVER_UPDATE') end
 
