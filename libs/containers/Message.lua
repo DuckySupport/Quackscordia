@@ -176,8 +176,8 @@ function Message:_setOldContent(d)
 	end
 end
 
-function Message:_modify(payload)
-	local data, err = self.client._api:editMessage(self._parent._id, self._id, payload)
+function Message:_modify(payload, files)
+	local data, err = self.client._api:editMessage(self._parent._id, self._id, payload, files)
 	if data then
 		self:_setOldContent(data)
 		self:_load(data)
@@ -263,16 +263,51 @@ are valid fields; `mention(s)`, `file(s)`, etc are not supported. The message
 must be authored by the current user. (ie: you cannot change the embed of messages
 sent by other users).
 ]=]
+
+local function parseFile(obj, files)
+	if type(obj) == 'string' then
+		local data, err = readFileSync(obj)
+		if not data then
+			return nil, err
+		end
+		files = files or {}
+		insert(files, {remove(splitPath(obj)), data})
+	elseif type(obj) == 'table' and type(obj[1]) == 'string' and type(obj[2]) == 'string' then
+		files = files or {}
+		insert(files, obj)
+	else
+		return nil, 'Invalid file object: ' .. tostring(obj)
+	end
+	return files
+end
+
 function Message:update(data)
+	local files
+	if data.file then
+		files, err = parseFile(data.file)
+		if err then
+			return nil, err
+		end
+	end
+	if type(data.files) == 'table' then
+		for _, file in ipairs(data.files) do
+			files, err = parseFile(file, files)
+			if err then
+				return nil, err
+			end
+		end
+	end
+
 	return self:_modify({
 		content = data.content or null,
 		embed = data.embed or null,
 		embeds = data.embeds or null,
+		components = data.components or null,
 		allowed_mentions = {
 			parse = {'users', 'roles', 'everyone'},
 			replied_user = not not self._reply_target,
-		},
-	})
+		}
+	}, files)
 end
 
 --[=[
