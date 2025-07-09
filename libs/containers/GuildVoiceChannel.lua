@@ -17,6 +17,18 @@ function GuildVoiceChannel:__init(data, parent)
 end
 
 --[=[
+@m setTopic
+@t http
+@p topic string
+@r boolean
+@d Sets the channel's topic. This must be between 1 and 1024 characters. Pass `nil`
+to remove the topic.
+]=]
+function GuildVoiceChannel:setTopic(topic)
+	return self:_modify({topic = topic or json.null})
+end
+
+--[=[
 @m setBitrate
 @t http
 @p bitrate number
