@@ -78,46 +78,23 @@ local function generateBoundary(files, boundary)
     return boundary
 end
 
-local function attachFiles(payload_json_string, files) -- Renamed 'payload' to avoid confusion
-	print("--- Entering attachFiles ---")
-	print("Payload JSON String (before adding to ret):", payload_json_string)
-	print("Type of Payload JSON String:", type(payload_json_string))
-	if files then
-		print("Number of files:", #files)
-		for i, v in ipairs(files) do
-			print(f("  File %d: filename='%s', content_length=%d", i, v[1] or "N/A", #(v[2] or "")))
-			-- WARNING: Do NOT print v[2] directly if it's large binary data
-			-- If v[2] is nil or empty string here, that's a problem.
-		end
-	else
-		print("No files provided to attachFiles.")
-	end
-
-	local boundary = generateBoundary(files)
-	local ret = {
-		'--' .. boundary,
-		'Content-Disposition:form-data;name="payload_json"',
-		'Content-Type:application/json\r\n',
-		payload_json_string -- This should be your JSON string
-	}
-	for i, v in ipairs(files) do
-		insert(ret, '--' .. boundary)
-		insert(ret, f('Content-Disposition:form-data;name="file%i";filename=%q', i, v[1]))
-		insert(ret, 'Content-Type:application/octet-stream\r\n')
-		insert(ret, v[2]) -- This is where the file data goes
-	end
-	insert(ret, '--' .. boundary .. '--')
-
-	local final_multipart_body = concat(ret, '\r\n')
-	print("Length of final multipart body:", #final_multipart_body)
-	-- WARNING: Do NOT print final_multipart_body if it's very large
-	-- You can print a snippet to check the start/end
-	-- print("Snippet of final multipart body:", final_multipart_body:sub(1, 200) .. "..." .. final_multipart_body:sub(#final_multipart_body - 200))
-	print("--- Exiting attachFiles ---")
-
-	return final_multipart_body, boundary
+local function attachFiles(payload, files)
+    local boundary = generateBoundary(files)
+    local ret = {
+        '--' .. boundary,
+        'Content-Disposition:form-data;name="payload_json"',
+        'Content-Type:application/json\r\n',
+        payload,
+    }
+    for i, v in ipairs(files) do
+        insert(ret, '--' .. boundary)
+        insert(ret, f('Content-Disposition:form-data;name="file%i";filename=%q', i, v[1]))
+        insert(ret, 'Content-Type:application/octet-stream\r\n')
+        insert(ret, v[2])
+    end
+    insert(ret, '--' .. boundary .. '--')
+    return concat(ret, '\r\n'), boundary
 end
-
 
 local mutexMeta = {
     __mode = 'v',
