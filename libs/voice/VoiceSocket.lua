@@ -5,6 +5,7 @@ local enums = require('enums')
 local sodium = require('voice/sodium') or {}
 
 local WebSocket = require('client/WebSocket')
+local Stopwatch = require('utils/Stopwatch')
 
 local logLevel = assert(enums.logLevel)
 local format = string.format
@@ -59,7 +60,7 @@ function VoiceSocket:__init(state, connection, manager)
     self._connection = connection
     self._session_id = state.session_id
     self._seq_ack = -1
-    self._sw = timer.Stopwatch() -- Initialize stopwatch for heartbeat timing
+    self._sw = Stopwatch() -- Initialize stopwatch for heartbeat timing
 
     self:debug('VoiceSocket initialized with: session_id=%s, guild_id=%s, user_id=%s, token_present=%s',
         self._session_id, state.guild_id, state.user_id, tostring(state.token ~= nil))
