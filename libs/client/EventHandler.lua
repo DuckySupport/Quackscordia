@@ -506,103 +506,61 @@ local function load(obj, d)
 	for k, v in pairs(d) do obj[k] = v end
 end
 
--- Add a new table to store pending voice server updates
--- You might want to store this on the client object, e.g., client._pending_voice_updates
--- For simplicity, let's assume a global or a field on EventHandler for now.
-local pendingVoiceUpdates = {}
-
--- ... (rest of your EventHandler code)
-
 function EventHandler.VOICE_STATE_UPDATE(d, client)
-    local guild = client._guilds:get(d.guild_id)
-    if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_STATE_UPDATE') end
-    local member = d.member and guild._members:_insert(d.member) or guild._members:get(d.user_id)
-    if not member then return warning(client, 'Member', d.user_id, 'VOICE_STATE_UPDATE') end
-    local states = guild._voice_states
-    local channels = guild._voice_channels
-    local new_channel_id = d.channel_id
-    local state = states[d.user_id]
-
-    -- Crucial for bot's own voice state
-    if d.user_id == client._user._id then
-        if not state then
-            -- First time bot's voice state for this guild, initialize it
-            state = {}
-            states[d.user_id] = state
-        end
-        -- Always load the latest voice state data (channel_id, session_id, etc.)
-        load(state, d)
-        client:debug('VOICE_STATE_UPDATE for bot: session_id=%s, channel_id=%s', state.session_id, state.channel_id)
-
-        -- Check if we have pending VOICE_SERVER_UPDATE data for this guild/user
-        local pending = pendingVoiceUpdates[d.guild_id]
-        if pending and pending.user_id == d.user_id then
-            -- We have both pieces of information, merge and prepare connection
-            load(state, pending) -- Merge endpoint and token
-            client:info('Bot voice state and server update received. Preparing connection.')
-            local channel = guild._voice_channels:get(state.channel_id)
-            if not channel then return warning(client, 'GuildVoiceChannel', state.channel_id, 'VOICE_STATE_UPDATE_PrepareConnection') end
-            local connection = channel._connection
-            if not connection then return client:warning('Voice connection not initialized before preparing connection') end
-            client._voice:_prepareConnection(state, connection)
-            pendingVoiceUpdates[d.guild_id] = nil -- Clear pending data
-        end
-
-    -- Original logic for other users/channel moves
-    elseif state then -- user is already connected
-        local old_channel_id = state.channel_id
-        load(state, d)
-        if new_channel_id ~= null then -- state changed, but user has not disconnected
-            if new_channel_id == old_channel_id then -- user did not change channels
-                client:emit('voiceUpdate', member)
-            else -- user changed channels
-                local old = channels:get(old_channel_id)
-                local new = channels:get(new_channel_id)
-                -- The bot's own channel move logic should be handled above
-                client:emit('voiceChannelLeave', member, old)
-                client:emit('voiceChannelJoin', member, new)
-            end
-        else -- user has disconnected
-            states[d.user_id] = nil
-            local old = channels:get(old_channel_id)
-            client:emit('voiceChannelLeave', member, old)
-            client:emit('voiceDisconnect', member)
-        end
-    else -- user has connected (non-bot)
-        states[d.user_id] = d
-        local new = channels:get(new_channel_id)
-        client:emit('voiceConnect', member)
-        client:emit('voiceChannelJoin', member, new)
-    end
+	local guild = client._guilds:get(d.guild_id)
+	if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_STATE_UPDATE') end
+	local member = d.member and guild._members:_insert(d.member) or guild._members:get(d.user_id)
+	if not member then return warning(client, 'Member', d.user_id, 'VOICE_STATE_UPDATE') end
+	local states = guild._voice_states
+	local channels = guild._voice_channels
+	local new_channel_id = d.channel_id
+	local state = states[d.user_id]
+	if state then -- user is already connected
+		local old_channel_id = state.channel_id
+		load(state, d)
+		if new_channel_id ~= null then -- state changed, but user has not disconnected
+			if new_channel_id == old_channel_id then -- user did not change channels
+				client:emit('voiceUpdate', member)
+			else -- user changed channels
+				local old = channels:get(old_channel_id)
+				local new = channels:get(new_channel_id)
+				if d.user_id == client._user._id then -- move connection to new channel
+					local connection = old._connection
+					if connection then
+						new._connection = connection
+						old._connection = nil
+						connection._channel = new
+						connection:_continue(true)
+					end
+				end
+				client:emit('voiceChannelLeave', member, old)
+				client:emit('voiceChannelJoin', member, new)
+			end
+		else -- user has disconnected
+			states[d.user_id] = nil
+			local old = channels:get(old_channel_id)
+			client:emit('voiceChannelLeave', member, old)
+			client:emit('voiceDisconnect', member)
+		end
+	else -- user has connected
+		states[d.user_id] = d
+		local new = channels:get(new_channel_id)
+		client:emit('voiceConnect', member)
+		client:emit('voiceChannelJoin', member, new)
+	end
 end
 
 function EventHandler.VOICE_SERVER_UPDATE(d, client)
-    local guild = client._guilds:get(d.guild_id)
-    if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_SERVER_UPDATE') end
-
-    -- Store the VOICE_SERVER_UPDATE data temporarily
-    pendingVoiceUpdates[d.guild_id] = d
-    client:debug('VOICE_SERVER_UPDATE received and cached for guild %s', d.guild_id)
-
-    local state = guild._voice_states[client._user._id]
-    if state then
-        -- We have a voice state for the bot, check if it has a session_id
-        if state.session_id then
-            -- We have both pieces of information, merge and prepare connection
-            load(state, d) -- Merge endpoint and token
-            client:info('Bot voice state (with session_id) and server update received. Preparing connection.')
-            local channel = guild._voice_channels:get(state.channel_id)
-            if not channel then return warning(client, 'GuildVoiceChannel', state.channel_id, 'VOICE_SERVER_UPDATE_PrepareConnection') end
-            local connection = channel._connection
-            if not connection then return client:warning('Voice connection not initialized before preparing connection') end
-            client._voice:_prepareConnection(state, connection)
-            pendingVoiceUpdates[d.guild_id] = nil -- Clear pending data
-        else
-            client:debug('VOICE_SERVER_UPDATE: Bot voice state exists but no session_id yet. Waiting for VOICE_STATE_UPDATE.')
-        end
-    else
-        client:debug('VOICE_SERVER_UPDATE: Bot voice state not initialized yet. Waiting for VOICE_STATE_UPDATE.')
-    end
+	local guild = client._guilds:get(d.guild_id)
+	if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_SERVER_UPDATE') end
+	local state = guild._voice_states[client._user._id]
+	if not state then return client:warning('Voice state not initialized before VOICE_SERVER_UPDATE') end
+	load(state, d)
+	local channel = guild._voice_channels:get(state.channel_id)
+	if not channel then return warning(client, 'GuildVoiceChannel', state.channel_id, 'VOICE_SERVER_UPDATE') end
+	local connection = channel._connection
+	if not connection then return client:warning('Voice connection not initialized before VOICE_SERVER_UPDATE') end
+	return client._voice:_prepareConnection(state, connection)
 end
 
 function EventHandler.WEBHOOKS_UPDATE(d, client) -- webhook object is not provided
