@@ -25,7 +25,7 @@ end
 to remove the topic.
 ]=]
 function GuildVoiceChannel:setStatus(status)
-	return self._parent._parent._api:modifyVoiceStatus(status)
+	return self._parent._parent._api:modifyVoiceStatus(self._id, status)
 end
 
 --[=[
