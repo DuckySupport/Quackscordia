@@ -58,41 +58,10 @@ function VoiceSocket:__init(state, connection, manager)
 	self._seq_ack = -1
 end
 
-function VoiceSocket:handleDisconnect(url, path, closeCode, closeReason) -- ADD url, path, closeCode, closeReason
-    self:info('VoiceSocket handleDisconnect called. Close Code: %s, Reason: %s', tostring(closeCode), tostring(closeReason))
-
-    -- Check for 4006 and attempt retry
-    if closeCode == VOICE_CLOSE_SESSION_INVALID then -- Use the constant defined in WebSocket.lua
-        self._retryAttempts = (self._retryAttempts or 0) + 1
-        local MAX_VOICE_RETRIES = 3 -- Define a limit for voice retries
-
-        if self._retryAttempts <= MAX_VOICE_RETRIES then
-            self:warning('Voice : 4006 - Session is no longer valid. Retrying voice connection (Attempt %d/%d)...',
-                         self._retryAttempts, MAX_VOICE_RETRIES)
-            -- Wait a bit before retrying to avoid hammering the server
-            -- The delay should ideally increase with each attempt (exponential backoff)
-            local retryDelay = 2000 * (self._retryAttempts - 1) + 1000 -- 1s, 3s, 5s...
-            uv.new_timer():start(retryDelay, 0, function(t)
-                t:close()
-                self:info('Voice : Attempting to reconnect voice socket to %s%s', url, path)
-                -- Re-initiate the connection process using the manager
-                -- We need the original state and connection objects.
-                -- Assuming _manager:_prepareConnection can be called again with the same state/connection
-                self._manager:_prepareConnection(self._state, self._connection)
-            end)
-            return -- Don't cleanup yet, we're retrying
-        else
-            self:error('Voice : Max retries (%d) reached for 4006 error. Giving up.', MAX_VOICE_RETRIES)
-            self._retryAttempts = 0 -- Reset counter for next time
-        end
-    end
-
-    -- If not a 4006 or max retries reached, proceed with cleanup
-    self._connection:_cleanup()
-    self:stopHeartbeat() -- Ensure heartbeat is stopped on disconnect
-    self._retryAttempts = 0 -- Reset retry counter on successful cleanup/final disconnect
+function VoiceSocket:handleDisconnect()
+	-- TODO: reconnecting and resuming
+	self._connection:_cleanup()
 end
-
 
 function VoiceSocket:handlePayload(payload)
 
