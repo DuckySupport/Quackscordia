@@ -65,9 +65,6 @@ end
 
 function VoiceSocket:handlePayload(payload)
 
-    p("VoiceSocket payload", payload)
-    p("session_id", self._session_id)
-
 	local manager = self._manager
 
 	local d = payload.d
@@ -152,7 +149,6 @@ end
 
 function VoiceSocket:heartbeat()
 	self._sw:reset()
-    p("heartbeat")
 	return self:_send(HEARTBEAT, {
 		t = time(),
 		seq_ack = self._seq_ack,
@@ -161,7 +157,6 @@ end
 
 function VoiceSocket:identify()
 	local state = self._state
-    p("identify", state)
 	return self:_send(IDENTIFY, {
 		server_id = state.guild_id,
 		user_id = state.user_id,
@@ -172,7 +167,6 @@ end
 
 function VoiceSocket:resume()
 	local state = self._state
-    p("resume", state)
 	return self:_send(RESUME, {
 		server_id = state.guild_id,
 		session_id = state.session_id,
@@ -182,7 +176,6 @@ function VoiceSocket:resume()
 end
 
 function VoiceSocket:handshake(server_ip, server_port)
-    p("handshake", server_ip, server_port)
 	local udp = uv.new_udp()
 	self._udp = udp
 	self._ip = server_ip
