@@ -692,6 +692,11 @@ function API:listVoiceRegions() -- Client:listVoiceRegions
     return self:request("GET", endpoint)
 end
 
+function API:modifyVoiceStatus(channel_id, status)
+    local endpoint = f(endpoints.CHANNEL_VOICE_STATUS, channel_id)
+    return self:request("PUT", endpoint, {status = status})
+end
+
 function API:createWebhook(channel_id, payload) -- GuildTextChannel:createWebhook
     local endpoint = f(endpoints.CHANNEL_WEBHOOKS, channel_id)
     return self:request("POST", endpoint, payload)

@@ -18,6 +18,7 @@ return {
 	CHANNEL_WEBHOOKS                = "/channels/%s/webhooks",
 	CHANNEL_TAG						= "/channels/%s/tags/%s",
 	CHANNEL_TAGS					= "/channels/%s/tags",
+	CHANNEL_VOICE_STATUS			= "/channels/%s/voice-status",
 	GATEWAY                         = "/gateway",
 	GATEWAY_BOT                     = "/gateway/bot",
 	GUILD                           = "/guilds/%s",

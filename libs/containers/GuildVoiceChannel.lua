@@ -24,8 +24,8 @@ end
 @d Sets the channel's topic. This must be between 1 and 1024 characters. Pass `nil`
 to remove the topic.
 ]=]
-function GuildVoiceChannel:setTopic(topic)
-	return self:_modify({topic = topic or json.null})
+function GuildVoiceChannel:setStatus(status)
+	return self._parent._parent._api:modifyVoiceStatus(status)
 end
 
 --[=[
