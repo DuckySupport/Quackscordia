@@ -23,6 +23,7 @@ local RECONNECT_CODE = '\015\160' -- code: 4000
 local function connect(url, path)
 	local options = assert(ws_parseUrl(url))
 	options.pathname = path
+	p("DEBUG: Attempting raw ws_connect with URL:", url, "Path:", path)
 	return assert(ws_connect(options))
 end
 
