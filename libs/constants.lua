@@ -15,7 +15,7 @@ return {
 	DAY_PER_WEEK = 7,
 	DAY_PER_MONTH = 30,
 	DAY_PER_YEAR = 365.25,
-	GATEWAY_VERSION_VOICE = 8,
+	GATEWAY_VERSION_VOICE = 7,
 	THREAD_TYPES = {
 		[10] = true,
 		[11] = true,
