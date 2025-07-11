@@ -47,7 +47,8 @@ function WebSocket:connect(url, path)
 		local parent = self._parent
 		for message in self._read do
 			local payload, str = self:parseMessage(message)
-			if not payload then break end
+			if not payload then p("WebSocket : No payload, breaking") break end
+			p("WebSocket : payload", payload)
 			parent:emit('raw', str)
 			if self.handlePayload then -- virtual method
 				self:handlePayload(payload)
@@ -98,6 +99,7 @@ function WebSocket:parseMessage(message)
 end
 
 function WebSocket:_send(op, d, identify)
+	p("WebSocket : send", op, d, identify)
 	self._mutex:lock()
 	local success, err
 	if identify or self._session_id then
