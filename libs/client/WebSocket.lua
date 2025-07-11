@@ -99,7 +99,7 @@ function WebSocket:parseMessage(message)
 end
 
 function WebSocket:_send(op, d, identify)
-	p("WebSocket : send", op, d, identify)
+	p("WebSocket : send", op, d, identify, self._session_id, self._write)
 	self._mutex:lock()
 	local success, err
 	if identify or self._session_id then
