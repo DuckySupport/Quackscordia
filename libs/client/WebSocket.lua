@@ -47,6 +47,7 @@ function WebSocket:connect(url, path)
 		local parent = self._parent
 		for message in self._read do
 			local payload, str = self:parseMessage(message)
+			p("RECEIVE", payload)
 			if not payload then break end
 			parent:emit('raw', str)
 			if self.handlePayload then -- virtual method
@@ -102,7 +103,9 @@ function WebSocket:_send(op, d, identify)
 	local success, err
 	if identify or self._session_id then
 		if self._write then
-			success, err = self._write {opcode = TEXT, payload = encode {op = op, d = d}}
+			local payload_str = encode {op = op, d = d}
+			p("SEND", payload_str)
+			success, err = self._write {opcode = TEXT, payload = payload_str}
 		else
 			success, err = false, 'Not connected to gateway'
 		end
