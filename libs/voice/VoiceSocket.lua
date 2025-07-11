@@ -157,6 +157,7 @@ end
 
 function VoiceSocket:identify()
 	local state = self._state
+	p("VoiceSocket : identify", state)
 	return self:_send(IDENTIFY, {
 		server_id = state.guild_id,
 		user_id = state.user_id,

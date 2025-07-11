@@ -104,7 +104,9 @@ function WebSocket:_send(op, d, identify, voice)
 	local success, err
 	if identify or self._session_id then
 		if self._write then
-			success, err = self._write {opcode = TEXT, payload = encode {op = op, d = d}}
+			local payload_str = encode {op = op, d = d}
+			p("WebSocket : payload_str", payload_str)
+			success, err = self._write {opcode = TEXT, payload = payload_str}
 		else
 			success, err = false, 'Not connected to gateway'
 		end
@@ -117,7 +119,7 @@ function WebSocket:_send(op, d, identify, voice)
 	else
 		self._mutex:unlockAfter(GATEWAY_DELAY)
 	end
-	
+
 	return success, err
 end
 
