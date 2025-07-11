@@ -80,6 +80,7 @@ function VoiceSocket:handlePayload(payload)
 
 		self:info('Received HELLO')
 		self:startHeartbeat(d.heartbeat_interval)
+		timer.sleep(50)
 		self:identify()
 
 	elseif op == READY then
