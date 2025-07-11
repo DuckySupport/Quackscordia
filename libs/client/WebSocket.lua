@@ -47,8 +47,7 @@ function WebSocket:connect(url, path)
 		local parent = self._parent
 		for message in self._read do
 			local payload, str = self:parseMessage(message)
-			if not payload then p("WebSocket : No payload, breaking") break end
-			p("WebSocket : payload", payload)
+			if not payload then break end
 			parent:emit('raw', str)
 			if self.handlePayload then -- virtual method
 				self:handlePayload(payload)
@@ -98,28 +97,19 @@ function WebSocket:parseMessage(message)
 
 end
 
-function WebSocket:_send(op, d, identify, voice)
-	p("WebSocket : send", op, d, identify, self._session_id, self._write)
+function WebSocket:_send(op, d, identify)
 	self._mutex:lock()
 	local success, err
 	if identify or self._session_id then
 		if self._write then
-			local payload_str = encode {op = op, d = d}
-			p("WebSocket : payload_str", payload_str)
-			success, err = self._write {opcode = TEXT, payload = payload_str}
+			success, err = self._write {opcode = TEXT, payload = encode {op = op, d = d}}
 		else
 			success, err = false, 'Not connected to gateway'
 		end
 	else
 		success, err = false, 'Invalid session'
 	end
-	
-	if voice then
-		self._mutex:unlock()
-	else
-		self._mutex:unlockAfter(GATEWAY_DELAY)
-	end
-
+	self._mutex:unlockAfter(GATEWAY_DELAY)
 	return success, err
 end
 

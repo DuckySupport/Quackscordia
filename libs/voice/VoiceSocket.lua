@@ -152,18 +152,17 @@ function VoiceSocket:heartbeat()
 	return self:_send(HEARTBEAT, {
 		t = time(),
 		seq_ack = self._seq_ack,
-	}, nil, true)
+	})
 end
 
 function VoiceSocket:identify()
 	local state = self._state
-	p("VoiceSocket : identify", state)
 	return self:_send(IDENTIFY, {
 		server_id = state.guild_id,
 		user_id = state.user_id,
 		session_id = state.session_id,
 		token = state.token,
-	}, true, true)
+	}, true)
 end
 
 function VoiceSocket:resume()
@@ -173,7 +172,7 @@ function VoiceSocket:resume()
 		session_id = state.session_id,
 		token = state.token,
 		seq_ack = self._seq_ack,
-	}, nil, true)
+	})
 end
 
 function VoiceSocket:handshake(server_ip, server_port)
@@ -200,7 +199,7 @@ function VoiceSocket:selectProtocol(address, port)
 			port = port,
 			mode = self._mode,
 		}
-	}, nil, true)
+	})
 end
 
 function VoiceSocket:setSpeaking(speaking)
@@ -208,7 +207,7 @@ function VoiceSocket:setSpeaking(speaking)
 		speaking = speaking,
 		delay = 0,
 		ssrc = self._ssrc,
-	}, nil, true)
+	})
 end
 
 return VoiceSocket
