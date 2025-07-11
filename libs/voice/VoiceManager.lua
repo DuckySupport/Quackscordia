@@ -18,6 +18,7 @@ function VoiceManager:__init(client)
 end
 
 function VoiceManager:_prepareConnection(state, connection)
+	p("prepareConnection", state)
 	if not next(opus) then
 		return self._client:error('Cannot prepare voice connection: libopus not found')
 	end

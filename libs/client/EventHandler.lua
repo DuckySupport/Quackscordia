@@ -507,6 +507,7 @@ local function load(obj, d)
 end
 
 function EventHandler.VOICE_STATE_UPDATE(d, client)
+	p("VOICE_STATE_UPDATE", d)
 	local guild = client._guilds:get(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_STATE_UPDATE') end
 	local member = d.member and guild._members:_insert(d.member) or guild._members:get(d.user_id)
@@ -551,6 +552,7 @@ function EventHandler.VOICE_STATE_UPDATE(d, client)
 end
 
 function EventHandler.VOICE_SERVER_UPDATE(d, client)
+	p("VOICE_SERVER_UPDATE", d)
 	local guild = client._guilds:get(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_SERVER_UPDATE') end
 	local state = guild._voice_states[client._user._id]
