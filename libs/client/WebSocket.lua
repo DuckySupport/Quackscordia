@@ -98,7 +98,7 @@ function WebSocket:parseMessage(message)
 
 end
 
-function WebSocket:_send(op, d, identify)
+function WebSocket:_send(op, d, identify, voice)
 	p("WebSocket : send", op, d, identify, self._session_id, self._write)
 	self._mutex:lock()
 	local success, err
@@ -111,7 +111,13 @@ function WebSocket:_send(op, d, identify)
 	else
 		success, err = false, 'Invalid session'
 	end
-	self._mutex:unlockAfter(GATEWAY_DELAY)
+	
+	if voice then
+		self._mutex:unlock()
+	else
+		self._mutex:unlockAfter(GATEWAY_DELAY)
+	end
+	
 	return success, err
 end
 
