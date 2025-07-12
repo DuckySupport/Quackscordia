@@ -489,4 +489,8 @@ function get.channel(self)
 	return self._channel
 end
 
+function get.client(self)
+	return self._client
+end
+
 return VoiceConnection
