@@ -211,15 +211,14 @@ table.findtable(tbl, "gold") returns:
 ---@param tbl table The table to search in
 ---@param query number|string|boolean What to search for
 ---@return table|nil The table it found it in
-function table.findtable(tbl, query)
+function table.findtable(input, query)
+	local tbl = table.deepcopy(input)
 	local ret
 
 	table.deeppairs(tbl, function(t, i, v)
 		if v == query then
 			ret = t
 		end
-
-		return v
 	end)
 
 	return ret
