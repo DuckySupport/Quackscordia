@@ -218,6 +218,8 @@ function table.findtable(tbl, query)
 		if v == query then
 			ret = t
 		end
+		
+		return v
 	end)
 
 	return ret
