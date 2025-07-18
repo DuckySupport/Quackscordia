@@ -79,8 +79,15 @@ function table.deepcopy(tbl, layer)
 end
 
 function table.deeppairs(tbl, fn)
-    if (not tbl) then return end
-	for k, v in pairs(tbl) do
+	if not tbl then return end
+
+	local keys = {}
+	for k in pairs(tbl) do
+		keys[#keys+1] = k
+	end
+
+	for _, k in ipairs(keys) do
+		local v = tbl[k]
 		if type(v) == "table" then
 			table.deeppairs(v, fn)
 		else
@@ -181,6 +188,39 @@ function table.find(tbl, val)
 			return v, i
 		end
 	end
+end
+
+--[[
+If the query (~= table) is found in a table, it returns the current table it found it in
+
+local tbl = {
+	{
+		item = "gold"
+	},
+	{
+		item = "trash"
+	}
+}
+
+table.findtable(tbl, "gold") returns:
+	{
+		item = "gold"
+	}
+]]--
+
+---@param tbl table The table to search in
+---@param query number|string|boolean What to search for
+---@return table|nil The table it found it in
+function table.findtable(tbl, query)
+	local ret
+
+	table.deeppairs(tbl, function(t, i, v)
+		if v == query then
+			ret = t
+		end
+	end)
+
+	return ret
 end
 
 function table.delete(tbl, val)
