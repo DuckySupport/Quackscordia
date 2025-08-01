@@ -240,7 +240,7 @@ end
 function table.shuffle(tbl)
     tbl = tbl or {}
 	for i = #tbl, 2, -1 do
-		local j = math.random(i)
+		local j = random(i)
 		tbl[i], tbl[j] = tbl[j], tbl[i]
 	end
 	return tbl
@@ -251,7 +251,7 @@ function table.chop(tbl, chop)
     local new = {}
 
     for i, v in pairs(tbl) do
-        table.insert(new, v)
+        insert(new, v)
         if i == chop then
             break
         end
