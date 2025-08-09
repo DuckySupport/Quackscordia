@@ -225,7 +225,8 @@ function table.findtable(input, query)
 end
 
 function table.delete(tbl, val)
-	if (not tbl) or (not val) then return false end
+    tbl = tbl or {}
+    if not val then return false end
 	for i, v in pairs(tbl) do
 		if (type(val) == "function" and val(v)) or (type(val) ~= "function" and (i == val or v == val)) then
 			remove(tbl, i)
@@ -234,6 +235,29 @@ function table.delete(tbl, val)
 	end
 
 	return false
+end
+
+function table.shuffle(tbl)
+    tbl = tbl or {}
+	for i = #tbl, 2, -1 do
+		local j = random(i)
+		tbl[i], tbl[j] = tbl[j], tbl[i]
+	end
+	return tbl
+end
+
+function table.chop(tbl, chop)
+    tbl = tbl or {}
+    local new = {}
+
+    for i, v in pairs(tbl) do
+        insert(new, v)
+        if i == chop then
+            break
+        end
+    end
+
+    return new
 end
 
 local string = {}
