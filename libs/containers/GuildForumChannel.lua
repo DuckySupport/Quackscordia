@@ -26,7 +26,7 @@ function GuildForumChannel:_load(data)
 end
 
 function GuildForumChannel:_loadMore(data)
-	return self._available_tags and self._available_tags:_load(data.available_tags, true)
+	return self._available_tags and data.available_tags and self._available_tags:_load(data.available_tags, true)
 end
 
 --[=[
