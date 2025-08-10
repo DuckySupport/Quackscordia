@@ -252,7 +252,10 @@ function API:commit(method, url, req, payload, retries)
 
 		end
 
-		client:error('%i %s : %s | %s', res.code, res.reason, origin, tostring(msg or "No Error"))
+		if not msg:lower():find("unknown member") then
+            client:error('%i %s : %s | %s', res.code, res.reason, origin, tostring(msg or "No Error"))
+        end
+        
 		return nil, msg, delay
 
 	end
