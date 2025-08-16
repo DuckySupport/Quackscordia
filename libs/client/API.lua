@@ -154,22 +154,19 @@ function API:request(method, endpoint, payload, query, files)
 		insert(req, {'X-RateLimit-Precision', PRECISION})
 	end
 
-    if payloadRequired[method] then
-        local encoded = payload and encode(payload) or '{"content":"Failed to encode payload."}'
-        assert(type(encoded) == "string" and #encoded > 0, "Invalid payload encoding")
-
-        if files and next(files) then
-            local boundary
-            encoded, boundary = attachFiles(encoded, files)
-            assert(encoded and #encoded > 0, "attachFiles produced empty body")
-            insert(req, {"Content-Type", MULTIPART .. boundary})
-        else
-            insert(req, {"Content-Type", JSON})
-        end
-
-        insert(req, {"Content-Length", tostring(#encoded)})
-        payload = encoded -- final string only
-    end
+	if payloadRequired[method] then
+        p("before", payload)
+		payload = (payload and encode(payload)) or '{"content": "Failed to encode payload."}'
+        p("after", payload)
+		if files and next(files) then
+			local boundary
+			payload, boundary = attachFiles(payload, files)
+			insert(req, {'Content-Type', MULTIPART .. boundary})
+		else
+			insert(req, {'Content-Type', JSON})
+		end
+		insert(req, {'Content-Length', #payload})
+	end
 
 	local mutex = self._mutexes[route(method, endpoint)]
 
