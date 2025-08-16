@@ -155,9 +155,9 @@ function API:request(method, endpoint, payload, query, files)
 	end
 
 	if payloadRequired[method] then
-        p("before", payload)
+        uv.sleep(1)
 		payload = (payload and encode(payload)) or '{"content": "Failed to encode payload."}'
-        p("after", payload)
+        uv.sleep(1)
 		if files and next(files) then
 			local boundary
 			payload, boundary = attachFiles(payload, files)
