@@ -389,9 +389,9 @@ function EventHandler.MESSAGE_DELETE_BULK(d, client)
 	for _, id in ipairs(d.ids) do
 		local message = channel._messages:_delete(id)
 		if message then
-			client:emit('messageDelete', message)
+			client:emit('messageDelete', message, true)
 		else
-			client:emit('messageDeleteUncached', channel, id)
+			client:emit('messageDeleteUncached', channel, id, true)
 		end
 	end
 end
