@@ -61,35 +61,51 @@ end
 ]=]
 function GuildVoiceChannel:join()
 
+	print("join " .. self._id)
+
 	local success, err
 
 	local connection = self._connection
 
 	if connection and connection._ready then
+		print("returning existing")
 		return connection
 	else
+
+		print("creating new")
 
 		local guild = self._parent
 		local client = guild._parent
 
+		print("updateVoice")
+
 		success, err = client._shards[guild.shardId]:updateVoice(guild._id, self._id)
 
 		if not success then
+			print("not successful, returning", tostring(err))
 			return nil, err
 		end
 
 		connection = guild._connection
 
 		if not connection then
+			print("no connection, creating new")
 			connection = VoiceConnection(self)
+			print("done")
 			guild._connection = connection
 		end
+
+		print("setting self._connection")
 
 		self._connection = connection
 
 	end
 
+	print("awaiting connection")
+
 	success, err = connection:_await()
+
+	print("done", tostring(err))
 
 	if success then
 		return connection
