@@ -248,16 +248,34 @@ end
 
 function table.chop(tbl, chop)
     tbl = tbl or {}
-    local new = {}
+    local ret = {}
 
     for i, v in pairs(tbl) do
-        insert(new, v)
+        insert(ret, v)
         if i == chop then
             break
         end
     end
 
-    return new
+    return ret
+end
+
+function table.after(tbl, after)
+    tbl = tbl or {}
+    local ret = {}
+
+	local start = false
+
+    for i, v in pairs(tbl) do
+        if start then
+        	insert(ret, v)
+		elseif i == after then
+			insert(ret, v)
+			start = true
+        end
+    end
+
+    return ret
 end
 
 local string = {}
