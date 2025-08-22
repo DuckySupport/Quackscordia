@@ -25,6 +25,15 @@ local USER_AGENT = f('DiscordBot (%s, %s)', package.homepage, package.version)
 local majorRoutes = {guilds = true, channels = true, webhooks = true}
 local payloadRequired = {PUT = true, PATCH = true, POST = true}
 
+local logBuffer = {}
+local function logBufferAdd(...)
+	local out = {}
+	for i = 1, select("#", ...) do
+		out[#out+1] = tostring(select(i, ...))
+	end
+	table.insert(logBuffer, table.concat(out, " "))
+end
+
 local function parseErrors(ret, errors, key)
     for k, v in pairs(errors) do
         if k == '_errors' then
@@ -155,8 +164,9 @@ function API:request(method, endpoint, payload, query, files)
 	end
 
 	if payloadRequired[method] then
-        uv.sleep(5)
+        logBufferAdd(payload)
 		payload = (payload and encode(payload)) or '{"content": "Failed to encode payload."}'
+        logBufferAdd(payload)
 		if files and next(files) then
 			local boundary
 			payload, boundary = attachFiles(payload, files)
