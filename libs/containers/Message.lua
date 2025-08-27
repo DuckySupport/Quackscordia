@@ -300,8 +300,8 @@ function Message:update(data)
 
 	return self:_modify({
 		content = data.content or null,
-		embed = data.embed or null,
-		embeds = data.embeds or null,
+		embed = data.embed,
+		embeds = data.embeds,
 		components = data.components or null,
 		allowed_mentions = {
 			parse = {'users', 'roles', 'everyone'},
