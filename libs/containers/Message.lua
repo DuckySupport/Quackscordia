@@ -292,6 +292,7 @@ local function parseFile(obj, files)
 end
 
 function Message:update(data)
+	p("received update", data)
   local files, err
   local format = string.format
 
