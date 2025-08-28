@@ -346,8 +346,6 @@ function Message:update(data)
     return nil, 'Message:update called with no changeable fields'
   end
 
-  p("updating", payload)
-
   local ok, respErr = self:_modify(payload, files)
   if not ok and type(respErr) == 'string' and respErr:lower():find('cannot send an empty message', 1, true) then
     p('discord said empty message; payload was:', payload)
