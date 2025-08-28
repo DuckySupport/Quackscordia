@@ -53,6 +53,16 @@ local function parseMentions(content, pattern)
 	return mentions
 end
 
+local function parseEmbed(obj, embeds)
+	if type(obj) == 'table' and next(obj) then
+		embeds = embeds or {}
+		insert(embeds, obj)
+	else
+		return nil, 'Invalid embed object: ' .. tostring(obj)
+	end
+	return embeds
+end
+
 function Message:_loadMore(data)
 
 	local mentions = {}
@@ -282,32 +292,65 @@ local function parseFile(obj, files)
 end
 
 function Message:update(data)
-	local files
-	if data.file then
-		files, err = parseFile(data.file)
-		if err then
-			return nil, err
-		end
-	end
-	if type(data.files) == 'table' then
-		for _, file in ipairs(data.files) do
-			files, err = parseFile(file, files)
-			if err then
-				return nil, err
-			end
-		end
-	end
+  local files, err
+  local format = string.format
 
-	return self:_modify({
-		content = data.content or null,
-		embed = data.embed or null,
-		embeds = data.embeds or null,
-		components = data.components or null,
-		allowed_mentions = {
-			parse = {'users', 'roles', 'everyone'},
-			replied_user = not not self._reply_target,
-		}
-	}, files)
+  if type(data) ~= 'table' then
+    return self:_modify({ content = data })
+  end
+
+  local content = data.content
+  if type(data.code) == 'string' then
+    content = format('```%s\n%s\n```', data.code, content or '')
+  elseif data.code == true then
+    content = format('```\n%s\n```', content or '')
+  end
+
+  local embeds
+  if data.embed then
+    embeds, err = parseEmbed(data.embed)
+    if err then return nil, err end
+  end
+  if type(data.embeds) == 'table' then
+    for _, e in ipairs(data.embeds) do
+      embeds, err = parseEmbed(e, embeds)
+      if err then return nil, err end
+    end
+  end
+
+  if data.file then
+    files, err = parseFile(data.file)
+    if err then return nil, err end
+  end
+  if type(data.files) == 'table' then
+    for _, f in ipairs(data.files) do
+      files, err = parseFile(f, files)
+      if err then return nil, err end
+    end
+  end
+
+  local allowedMentions = data.allowed_mentions or data.allowedMentions or {
+    parse = {'users', 'roles', 'everyone'},
+    replied_user = not not self._reply_target,
+  }
+
+  local components = data.components
+
+  local payload = {}
+  if content ~= nil         then payload.content          = content end
+  if embeds  ~= nil         then payload.embeds           = embeds  end
+  if components ~= nil      then payload.components       = components end
+  if allowedMentions ~= nil then payload.allowed_mentions = allowedMentions end
+
+  if next(payload) == nil then
+    return nil, 'Message:update called with no changeable fields'
+  end
+
+  local ok, respErr = self:_modify(payload, files)
+  if not ok and type(respErr) == 'string' and respErr:lower():find('cannot send an empty message', 1, true) then
+    p('discord said empty message; payload was:', payload)
+  end
+  return ok, respErr
 end
 
 --[=[
