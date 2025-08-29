@@ -174,12 +174,26 @@ end
 function Emitter:removeListener(name, fn)
 	local listeners = self._listeners[name]
 	if not listeners then return end
+
+	local found = false
 	for i, listener in ipairs(listeners) do
 		if listener and listener.fn == fn then
 			listeners[i] = false
+			found = true
 		end
 	end
+
+	if not found then return end
+
 	listeners._removed = true
+
+	for i = 1, #listeners do
+		if listeners[i] then
+			return
+		end
+	end
+
+	self._listeners[name] = nil
 end
 
 --[=[
