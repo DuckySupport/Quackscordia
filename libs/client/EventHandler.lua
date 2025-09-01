@@ -50,7 +50,9 @@ end
 
 local EventHandler = setmetatable({}, {__index = function(self, k)
 	self[k] = function(_, _, shard)
-		return shard:warning('Unhandled gateway event: %s', k)
+		if not shard._client._options.suppressUnhandledGatewayEvents then
+			return shard:warning('Unhandled gateway event: %s', k)
+		end
 	end
 	return self[k]
 end})
@@ -162,7 +164,9 @@ function EventHandler.CHANNEL_CREATE(d, client)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_CREATE') end
 		channel = guild._categories:_insert(d)
 	else
-		return client:warning('Unhandled CHANNEL_CREATE (type %s)', d.type)
+		if not client._options.suppressUnhandledGatewayEvents then
+			return client:warning('Unhandled CHANNEL_CREATE (type %s)', d.type)
+		end
 	end
 	return client:emit('channelCreate', channel)
 end
@@ -191,7 +195,9 @@ function EventHandler.CHANNEL_UPDATE(d, client)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_UPDATE') end
 		channel = guild._categories:_insert(d)
 	else
-		return client:warning('Unhandled CHANNEL_UPDATE (type %s)', d.type)
+		if not client._options.suppressUnhandledGatewayEvents then
+			return client:warning('Unhandled CHANNEL_UPDATE (type %s)', d.type)
+		end
 	end
 	return client:emit('channelUpdate', channel)
 end
@@ -220,7 +226,9 @@ function EventHandler.CHANNEL_DELETE(d, client)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_DELETE') end
 		channel = guild._categories:_remove(d)
 	else
-		return client:warning('Unhandled CHANNEL_DELETE (type %s)', d.type)
+		if not client._options.suppressUnhandledGatewayEvents then
+			return client:warning('Unhandled CHANNEL_DELETE (type %s)', d.type)
+		end
 	end
 	return client:emit('channelDelete', channel)
 end

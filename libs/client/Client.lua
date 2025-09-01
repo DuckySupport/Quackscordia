@@ -71,6 +71,7 @@ local defaultOptions = {
 	dateTime = '%F %T',
 	syncGuilds = false,
 	gatewayIntents = 3243773, -- all non-privileged intents
+	suppressUnhandledGatewayEvents = false
 }
 
 local function parseOptions(customOptions)
