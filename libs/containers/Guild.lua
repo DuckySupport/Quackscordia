@@ -743,10 +743,11 @@ end
 @d Sets the current client's member profile within the guild. Optional payload fields are: nick: string, bio: string, banner: file/base64, avatar: file/base64
 ]=]
 function Guild:setProfile(payload)
-	if payload then
-		payload.avatar = payload.avatar and Resolver.base64(payload.avatar)
-		payload.banner = payload.banner and Resolver.base64(payload.banner)
-	end
+	payload = payload or {}
+	payload.nick = payload.nick or ""
+	payload.bio = payload.bio or ""
+	payload.avatar = payload.avatar and Resolver.base64(payload.avatar) or json.null
+	payload.banner = payload.banner and Resolver.base64(payload.banner) or json.null
 
 	local data, err = self.client._api:modifyCurrentMember(self._id, payload)
 	if data then
