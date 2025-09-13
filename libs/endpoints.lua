@@ -38,7 +38,7 @@ return {
 	GUILD_INVITES                   = "/guilds/%s/invites",
 	GUILD_MEMBER                    = "/guilds/%s/members/%s",
 	GUILD_MEMBERS                   = "/guilds/%s/members",
-	GUILD_MEMBER_ME_NICK            = "/guilds/%s/members/@me/nick",
+	GUILD_MEMBER_ME					= "/guilds/%s/members/@me",
 	GUILD_MEMBER_ROLE               = "/guilds/%s/members/%s/roles/%s",
 	GUILD_PRUNE                     = "/guilds/%s/prune",
 	GUILD_REGIONS                   = "/guilds/%s/regions",

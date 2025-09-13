@@ -382,7 +382,7 @@ function Member:setNickname(nick)
 	nick = nick or ''
 	local data, err
 	if self.id == self.client._user._id then
-		data, err = self.client._api:modifyCurrentUsersNick(self._parent._id, {nick = nick})
+		data, err = self.client._api:modifyCurrentMember(self._parent._id, {nick = nick})
 	else
 		data, err = self.client._api:modifyGuildMember(self._parent._id, self.id, {nick = nick})
 	end

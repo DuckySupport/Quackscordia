@@ -521,8 +521,8 @@ function API:modifyGuildMember(guild_id, user_id, payload) -- various Member met
     return self:request("PATCH", endpoint, payload)
 end
 
-function API:modifyCurrentUsersNick(guild_id, payload) -- Member:setNickname
-    local endpoint = f(endpoints.GUILD_MEMBER_ME_NICK, guild_id)
+function API:modifyCurrentMember(guild_id, payload) -- Member:setNickname, Guild:setProfile
+    local endpoint = f(endpoints.GUILD_MEMBER_ME, guild_id)
     return self:request("PATCH", endpoint, payload)
 end
 

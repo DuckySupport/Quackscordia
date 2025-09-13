@@ -735,6 +735,27 @@ function Guild:unbanUser(id, reason)
 	end
 end
 
+--[=[
+@m setProfile
+@t http
+@p payload table
+@r boolean
+@d Sets the current client's member profile within the guild. Optional payload fields are: nick: string, bio: string, banner: file/base64, avatar: file/base64
+]=]
+function Guild:setProfile(payload)
+	if payload then
+		payload.avatar = payload.avatar and Resolver.base64(payload.avatar)
+		payload.banner = payload.banner and Resolver.base64(payload.banner)
+	end
+
+	local data, err = self.client._api:modifyCurrentMember(self._id, payload)
+	if data then
+		return true
+	else
+		return false, err
+	end
+end
+
 --[=[@p shardId number The ID of the shard on which this guild is served. If only one shard is in
 operation, then this will always be 0.]=]
 function get.shardId(self)
