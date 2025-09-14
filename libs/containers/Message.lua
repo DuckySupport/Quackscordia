@@ -177,7 +177,7 @@ function Message:_setOldContent(d)
 end
 
 function Message:_modify(payload, files)
-	uv.sleep(5)
+	uv.sleep(50)
 	local data, err = self.client._api:editMessage(self._parent._id, self._id, payload, files)
 	if data then
 		self:_setOldContent(data)
