@@ -127,7 +127,7 @@ function Shard:handlePayload(payload)
 	elseif op == RECONNECT then
 
 		self:info('Discord has requested a reconnection')
-		client:emit('shardReconnectRequest', self)
+		client:emit('shardReconnectRequest', self._id, self)
 		self:disconnect(true)
 
 	elseif op == INVALID_SESSION then
