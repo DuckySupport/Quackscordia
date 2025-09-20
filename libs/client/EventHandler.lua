@@ -1,6 +1,5 @@
 local enums = require('enums')
 local json = require('json')
-local AsyncProcessor = require('utils/AsyncProcessor')
 
 local channelType = assert(enums.channelType)
 local insert = table.insert
@@ -71,31 +70,31 @@ function EventHandler.READY(d, client, shard)
 	local private_channels = client._private_channels
 	local relationships = client._relationships
 
-	AsyncProcessor.process(d.private_channels, function(channel)
+	for _, channel in ipairs(d.private_channels) do
 		if channel.type == channelType.private then
 			private_channels:_insert(channel)
 		elseif channel.type == channelType.group then
 			group_channels:_insert(channel)
 		end
-	end)
+	end
 
 	local loading = shard._loading
 
 	if d.user.bot then
-		AsyncProcessor.process(d.guilds, function(guild)
+		for _, guild in ipairs(d.guilds) do
 			guilds:_insert(guild)
 			loading.guilds[guild.id] = true
-		end)
+		end
 	else
 		if client._options.syncGuilds then
 			local ids = {}
-			AsyncProcessor.process(d.guilds, function(guild)
+			for _, guild in ipairs(d.guilds) do
 				guilds:_insert(guild)
 				if not guild.unavailable then
 					loading.syncs[guild.id] = true
 					insert(ids, guild.id)
 				end
-			end)
+			end
 			shard:syncGuilds(ids)
 		else
 			guilds:_load(d.guilds)
@@ -104,12 +103,12 @@ function EventHandler.READY(d, client, shard)
 
 	relationships:_load(d.relationships)
 
-	AsyncProcessor.process(d.presences, function(presence)
+	for _, presence in ipairs(d.presences) do
 		local relationship = relationships:get(presence.user.id)
 		if relationship then
 			relationship:_loadPresence(presence)
 		end
-	end)
+	end
 
 	return checkReady(shard)
 
@@ -123,9 +122,7 @@ end
 function EventHandler.GUILD_MEMBERS_CHUNK(d, client, shard)
 	local guild = client._guilds:get(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_MEMBERS_CHUNK') end
-	AsyncProcessor.process(d.members, function(member)
-		guild._members:_insert(member)
-	end)
+	guild._members:_load(d.members)
 	if shard._loading and guild._member_count == #guild._members then
 		shard._loading.chunks[d.guild_id] = nil
 		return checkReady(shard)
@@ -397,14 +394,14 @@ function EventHandler.MESSAGE_DELETE_BULK(d, client)
 	if THREAD_TYPES[channel._type] then
 		channel._message_count = channel._message_count - #d.ids
 	end
-	AsyncProcessor.process(d.ids, function(id)
+	for _, id in ipairs(d.ids) do
 		local message = channel._messages:_delete(id)
 		if message then
 			client:emit('messageDelete', message, true)
 		else
 			client:emit('messageDeleteUncached', channel, id, true)
 		end
-	end)
+	end
 end
 
 function EventHandler.MESSAGE_REACTION_ADD(d, client)
