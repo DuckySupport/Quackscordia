@@ -1,5 +1,6 @@
 local json = require('json')
 local timer = require('timer')
+local AsyncProcessor = require('utils/AsyncProcessor')
 
 local EventHandler = require('client/EventHandler')
 local WebSocket = require('client/WebSocket')
@@ -117,7 +118,7 @@ function Shard:handlePayload(payload)
 
 		self._seq = s
 		if not ignore[t] then
-			EventHandler[t](d, client, self)
+			AsyncProcessor.process(d, EventHandler[t], client, self)
 		end
 
 	elseif op == HEARTBEAT then

@@ -3,12 +3,13 @@ local miniz = require('miniz')
 local Mutex = require('utils/Mutex')
 local Emitter = require('utils/Emitter')
 local Stopwatch = require('utils/Stopwatch')
+local AsyncProcessor = require('utils/AsyncProcessor')
 
 local websocket = require('coro-websocket')
 local constants = require('constants')
 
 local inflate = miniz.inflate
-local encode, decode, null = json.encode, json.decode, json.null
+local encode, null = json.encode, json.null
 local ws_parseUrl, ws_connect = websocket.parseUrl, websocket.connect
 
 local GATEWAY_DELAY = constants.GATEWAY_DELAY
@@ -46,12 +47,14 @@ function WebSocket:connect(url, path)
 		self:info('Connected to %s', url)
 		local parent = self._parent
 		for message in self._read do
-			local payload, str = self:parseMessage(message)
-			if not payload then break end
-			parent:emit('raw', str)
-			if self.handlePayload then -- virtual method
-				self:handlePayload(payload)
-			end
+			coroutine.wrap(function()
+				local payload, str = self:parseMessage(message)
+				if not payload then return end
+				parent:emit('raw', str)
+				if self.handlePayload then -- virtual method
+					self:handlePayload(payload)
+				end
+			end)()
 		end
 		self:info('Disconnected')
 	else
@@ -79,12 +82,12 @@ function WebSocket:parseMessage(message)
 
 	if opcode == TEXT then
 
-		return decode(payload, 1, null), payload
+		return AsyncProcessor.decode(payload), payload
 
 	elseif opcode == BINARY then
 
 		payload = inflate(payload, 1)
-		return decode(payload, 1, null), payload
+		return AsyncProcessor.decode(payload), payload
 
 	elseif opcode == CLOSE then
 
