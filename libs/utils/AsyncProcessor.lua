@@ -14,7 +14,7 @@ function AsyncProcessor.decode(payload)
     local current_key
 
     local handler = {
-        start_object = function()
+        startobject = function()
             local new_obj = {}
             if #stack > 0 then
                 local parent = stack[#stack]
@@ -28,10 +28,10 @@ function AsyncProcessor.decode(payload)
             end
             table.insert(stack, new_obj)
         end,
-        end_object = function()
+        endobject = function()
             result = table.remove(stack)
         end,
-        start_array = function()
+        startarray = function()
             local new_arr = {}
             if #stack > 0 then
                 local parent = stack[#stack]
@@ -45,13 +45,13 @@ function AsyncProcessor.decode(payload)
             end
             table.insert(stack, new_arr)
         end,
-        end_array = function()
+        endarray = function()
             result = table.remove(stack)
         end,
         key = function(k)
             current_key = k
         end,
-        value = function(v)
+        string = function(v)
             local parent = stack[#stack]
             if type(parent) == 'table' then
                 if current_key then
@@ -61,15 +61,46 @@ function AsyncProcessor.decode(payload)
                     table.insert(parent, v)
                 end
             end
-        end
+        end,
+        number = function(v)
+            local parent = stack[#stack]
+            if type(parent) == 'table' then
+                if current_key then
+                    parent[current_key] = v
+                    current_key = nil
+                else
+                    table.insert(parent, v)
+                end
+            end
+        end,
+        boolean = function(v)
+            local parent = stack[#stack]
+            if type(parent) == 'table' then
+                if current_key then
+                    parent[current_key] = v
+                    current_key = nil
+                else
+                    table.insert(parent, v)
+                end
+            end
+        end,
+        null = function()
+            local parent = stack[#stack]
+            if type(parent) == 'table' then
+                if current_key then
+                    parent[current_key] = json.null
+                    current_key = nil
+                else
+                    table.insert(parent, json.null)
+                end
+            end
+        end,
     }
 
-    local sax = lunajson.sax.new(handler)
+    local parser = lunajson.newparser(payload, handler)
 
     -- Process the payload in chunks to allow for yielding.
-    local chunk_size = 1024
-    for i = 1, #payload, chunk_size do
-        sax:parse(payload:sub(i, i + chunk_size - 1))
+    while parser:run() do
         coroutine.yield()
     end
 
