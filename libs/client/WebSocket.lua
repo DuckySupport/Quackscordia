@@ -1,5 +1,4 @@
 local json = require('json')
-local lunajson = require("lunajson")
 local miniz = require('miniz')
 local Mutex = require('utils/Mutex')
 local Emitter = require('utils/Emitter')
@@ -9,7 +8,7 @@ local websocket = require('coro-websocket')
 local constants = require('constants')
 
 local inflate = miniz.inflate
-local encode, decode, null = lunajson.encode, lunajson.decode, json.null
+local encode, decode, null = json.encode, json.decode, json.null
 local ws_parseUrl, ws_connect = websocket.parseUrl, websocket.connect
 
 local GATEWAY_DELAY = constants.GATEWAY_DELAY
