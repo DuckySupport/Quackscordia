@@ -165,7 +165,7 @@ function API:request(method, endpoint, payload, query, files)
 
 	if payloadRequired[method] then
         logBufferAdd(payload)
-		payload = (payload and encode(payload)) or '{"content": "Failed to encode payload."}'
+		payload = (payload and encode(payload, null)) or '{"content": "Failed to encode payload."}'
         logBufferAdd(payload)
 		if files and next(files) then
 			local boundary
