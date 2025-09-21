@@ -1,5 +1,6 @@
 local uv = require("uv")
 local json = require('json')
+local lunajson = require("lunajson")
 local timer = require('timer')
 local http = require('coro-http')
 local package = require('../../package.lua')
@@ -10,7 +11,7 @@ local constants = require('constants')
 local request = http.request
 local f, gsub, byte = string.format, string.gsub, string.byte
 local max, random = math.max, math.random
-local encode, decode, null = json.encode, json.decode, json.null
+local encode, decode, null = lunajson.encode, lunajson.decode, json.null
 local insert, concat = table.insert, table.concat
 local sleep = timer.sleep
 local running = coroutine.running
