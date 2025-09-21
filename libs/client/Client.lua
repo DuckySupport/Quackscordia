@@ -12,6 +12,7 @@ at any time. See [[client options]].
 
 local fs = require('fs')
 local json = require('json')
+local lunajson = require("lunajson")
 
 local constants = require('constants')
 local enums = require('enums')
@@ -37,7 +38,7 @@ local Mutex = require('utils/Mutex')
 
 local VoiceManager = require('voice/VoiceManager')
 
-local encode, decode, null = json.encode, json.decode, json.null
+local encode, decode, null = lunajson.encode, lunajson.decode, json.null
 local readFileSync, writeFileSync = fs.readFileSync, fs.writeFileSync
 local band, bor, bnot = bit.band, bit.bor, bit.bnot
 
