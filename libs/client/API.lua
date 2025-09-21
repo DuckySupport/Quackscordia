@@ -176,6 +176,7 @@ function API:request(method, endpoint, payload, query, files)
 			insert(req, {'Content-Type', JSON})
 		end
 		insert(req, {'Content-Length', #payload})
+        insert(req, {"Connection", "close"})
 	end
 
 	local mutex = self._mutexes[route(method, endpoint)]
