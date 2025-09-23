@@ -66,11 +66,15 @@ function table.copy(tbl)
 end
 
 function table.deepcopy(tbl)
-	local ret = {}
-	for k, v in pairs(tbl) do
-		ret[k] = type(v) == 'table' and table.deepcopy(v) or v
-	end
-	return ret
+    local ret = {}
+    for k, v in pairs(tbl) do
+        ret[k] = type(v) == 'table' and table.deepcopy(v) or v
+    end
+    local mt = getmetatable(tbl)
+    if mt then
+        setmetatable(ret, table.deepcopy(mt))
+    end
+    return ret
 end
 
 function table.deeppairs(tbl, fn)
