@@ -66,7 +66,7 @@ function table.copy(tbl)
 end
 
 function table.deepcopy(tbl, layer)
-    if (not tbl) then return {} end
+    if (not tbl) then return {} elseif type(tbl) == "string" then return tostring(tbl .. "") end
 	layer = layer or 1
 	if layer > 25 then
 		return nil
