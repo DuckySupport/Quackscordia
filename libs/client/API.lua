@@ -6,7 +6,7 @@ local package = require('../../package.lua')
 local Mutex = require('utils/Mutex')
 local endpoints = require('endpoints')
 local constants = require('constants')
-require('extensions')
+require('extensions')()
 
 local request = http.request
 local f, gsub, byte = string.format, string.gsub, string.byte
