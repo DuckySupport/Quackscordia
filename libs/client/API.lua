@@ -127,9 +127,7 @@ function API:authenticate(token)
 end
 
 function API:request(method, endpoint, payload, query, files)
-    if payload then
-        payload = deepcopy(payload)
-    end
+    payload = deepcopy(payload)
 
 	local _, main = running()
 	if main then
