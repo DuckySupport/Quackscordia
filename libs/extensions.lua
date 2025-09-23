@@ -66,6 +66,7 @@ function table.copy(tbl)
 end
 
 function table.deepcopy(tbl)
+	if not tbl then return {} end
     local ret = {}
     for k, v in pairs(tbl) do
         ret[k] = type(v) == 'table' and table.deepcopy(v) or v
