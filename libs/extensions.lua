@@ -65,15 +65,10 @@ function table.copy(tbl)
 	return ret
 end
 
-function table.deepcopy(tbl, layer)
-    if (not tbl) then return elseif type(tbl) == "string" then return tostring(tbl .. "") end
-	layer = layer or 1
-	if layer > 25 then
-		return nil
-	end
+function table.deepcopy(tbl)
 	local ret = {}
 	for k, v in pairs(tbl) do
-		ret[k] = type(v) == 'table' and table.deepcopy(v, layer + 1) or v
+		ret[k] = type(v) == 'table' and table.deepcopy(v) or v
 	end
 	return ret
 end
