@@ -110,7 +110,7 @@ function WebSocket:_send(op, d, identify)
 		success, err = false, 'Invalid session'
 	end
 	self._mutex:unlock()
-	--self._mutex:unlockAfter(GATEWAY_DELAY)
+	-- self._mutex:unlockAfter(GATEWAY_DELAY)
 	return success, err
 end
 

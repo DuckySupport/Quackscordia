@@ -173,9 +173,9 @@ function API:request(method, endpoint, payload, query, files)
 
 	local mutex = self._mutexes[route(method, endpoint)]
 
-	mutex:lock()
-	local data, err, delay = self:commit(method, url, req, payload, 0)
-	mutex:unlockAfter(delay)
+	-- mutex:lock()
+	local data, err, delay = self:commit(method, url, req, payload, 0, mutex)
+	-- mutex:unlockAfter(delay)
 
 	if data then
 		return data
@@ -185,7 +185,7 @@ function API:request(method, endpoint, payload, query, files)
 
 end
 
-function API:commit(method, url, req, payload, retries)
+function API:commit(method, url, req, payload, retries, mutex)
     local debugInfo
     for i = 1, 10 do
         debugInfo = debug.getinfo(i, "Sl")
@@ -199,7 +199,9 @@ function API:commit(method, url, req, payload, retries)
 	local options = client._options
 	local delay = options.routeDelay
 
+    if mutex then mutex:lock() end
 	local success, res, msg = pcall(request, method, url, req, payload)
+    if mutex then mutex:unlock() end
 
 	if not success then
 		return nil, res, delay
