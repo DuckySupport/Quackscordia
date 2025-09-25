@@ -184,6 +184,7 @@ end
 
 function Shard:identifyWait()
 	if self:waitFor('READY', 1.5 * ID_DELAY) then
+		self:info("Received READY after identification, sleeping " .. tostring(ID_DELAY) .. "ms", self._id)
 		return sleep(ID_DELAY)
 	end
 end
