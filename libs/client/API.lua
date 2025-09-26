@@ -10,7 +10,7 @@ require('extensions')()
 
 local request = http.request
 local f, gsub, byte = string.format, string.gsub, string.byte
-local max, random = math.max, math.random
+local max, random, floor = math.max, math.random, math.floor
 local encode, decode, null = json.encode, json.decode, json.null
 local insert, concat, deepcopy = table.insert, table.concat, table.deepcopy
 local sleep = timer.sleep
@@ -229,7 +229,7 @@ function API:commit(method, url, req, payload, retries, mutex)
 
 			local retry
 			if res.code == 429 then
-				delay = data.retry_after
+				delay = data.retry_after and floor(data.retry_after + 0.5) or nil
 				retry = retries < options.maxRetries
 			elseif res.code == 502 then
 				delay = delay + random(2000)
@@ -239,7 +239,7 @@ function API:commit(method, url, req, payload, retries, mutex)
 			if retry and delay then
                 p("RETRYING AFTER " .. delay .. "ms", res.code, res.reason)
                 p("data", data)
-				client:warning('%i %s : retrying after %ims : %s', res.code, res.reason, delay, origin)
+                client:warning('%i %s : retrying after %ims : %s', res.code, res.reason, delay, origin)
 				sleep(delay)
 				return self:commit(method, url, req, payload, retries + 1)
 			end
