@@ -238,6 +238,7 @@ function API:commit(method, url, req, payload, retries, mutex)
 
 			if retry and delay then
                 p("RETRYING AFTER " .. delay .. "ms", res.code, res.reason)
+                p("Retry-After", res['retry-after'])
                 p("data", data)
                 client:warning('%i %s : retrying after %ims : %s', res.code, res.reason, delay, origin)
 				sleep(delay)
