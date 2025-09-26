@@ -229,7 +229,7 @@ function API:commit(method, url, req, payload, retries, mutex)
 
 			local retry
 			if res.code == 429 then
-				delay = data.retry_after and ceil(data.retry_after) or nil
+				delay = data.retry_after * 1000
 				retry = retries < options.maxRetries
 			elseif res.code == 502 then
 				delay = delay + random(2000)
