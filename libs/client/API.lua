@@ -220,7 +220,7 @@ function API:commit(method, url, req, payload, retries, mutex)
 		delay = max(1000 * res['x-ratelimit-reset-after'], delay)
 	end
 
-	local data = res['Content-Type'] == JSON and decode(msg, 1) or msg
+	local data = res['Content-Type'] == JSON and decode(msg, 1, null) or msg
 
 	if res.code < 300 then
 
