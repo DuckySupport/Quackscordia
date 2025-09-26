@@ -10,7 +10,7 @@ require('extensions')()
 
 local request = http.request
 local f, gsub, byte = string.format, string.gsub, string.byte
-local max, random, ceil = math.max, math.random, math.ceil
+local max, random = math.max, math.random
 local encode, decode, null = json.encode, json.decode, json.null
 local insert, concat, deepcopy = table.insert, table.concat, table.deepcopy
 local sleep = timer.sleep
