@@ -79,12 +79,12 @@ function WebSocket:parseMessage(message)
 
 	if opcode == TEXT then
 
-		return decode(payload, 1, null), payload
+		return decode(payload, 1), payload
 
 	elseif opcode == BINARY then
 
 		payload = inflate(payload, 1)
-		return decode(payload, 1, null), payload
+		return decode(payload, 1), payload
 
 	elseif opcode == CLOSE then
 

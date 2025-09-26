@@ -207,10 +207,6 @@ function API:commit(method, url, req, payload, retries, mutex)
 		return nil, res, delay
 	end
 
-    if res.code == 429 then
-        p("429 Too Many Requests", res, msg)
-    end
-
 	for i, v in ipairs(res) do
 		res[v[1]:lower()] = v[2]
 		res[i] = nil
@@ -220,7 +216,7 @@ function API:commit(method, url, req, payload, retries, mutex)
 		delay = max(1000 * res['x-ratelimit-reset-after'], delay)
 	end
 
-	local data = res['Content-Type'] == JSON and decode(msg, 1, null) or msg
+	local data = res['content-type'] == JSON and decode(msg, 1) or msg
 
 	if res.code < 300 then
 
@@ -241,6 +237,7 @@ function API:commit(method, url, req, payload, retries, mutex)
 			end
 
 			if retry and delay then
+                p("RETRYING", res, msg)
 				client:warning('%i %s : retrying after %ims : %s', res.code, res.reason, delay, origin)
 				sleep(delay)
 				return self:commit(method, url, req, payload, retries + 1)
