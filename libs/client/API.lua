@@ -235,6 +235,7 @@ function API:commit(method, url, req, payload, retries)
 			end
 
 			if retry and delay then
+                p(res['content-type'], res['retry-after'], data, delay)
                 client:warning('%i %s : retrying after %ims : %s', res.code, res.reason, delay, origin)
 				sleep(delay)
 				return self:commit(method, url, req, payload, retries + 1)
