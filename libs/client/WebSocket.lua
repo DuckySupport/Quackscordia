@@ -79,12 +79,12 @@ function WebSocket:parseMessage(message)
 
 	if opcode == TEXT then
 
-		return decode(payload, 1), payload
+		return decode(payload, 1, null), payload
 
 	elseif opcode == BINARY then
 
 		payload = inflate(payload, 1)
-		return decode(payload, 1), payload
+		return decode(payload, 1, null), payload
 
 	elseif opcode == CLOSE then
 
@@ -99,19 +99,17 @@ end
 
 function WebSocket:_send(op, d, identify)
 	local success, err
-	-- self._mutex:lock()
+	self._mutex:lock()
 	if identify or self._session_id then
 		if self._write then
-			self._mutex:lock()
 			success, err = self._write {opcode = TEXT, payload = encode {op = op, d = d}}
-			self._mutex:unlock()
 		else
 			success, err = false, 'Not connected to gateway'
 		end
 	else
 		success, err = false, 'Invalid session'
 	end
-	-- self._mutex:unlockAfter(GATEWAY_DELAY)
+	self._mutex:unlockAfter(GATEWAY_DELAY)
 	return success, err
 end
 

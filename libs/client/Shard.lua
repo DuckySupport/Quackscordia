@@ -201,7 +201,17 @@ function Shard:identify()
 	local options = client._options
 
 	mutex:lock()
-	local result = self:_send(IDENTIFY, {
+	wrap(function()
+		self:identifyWait()
+		mutex:unlock()
+	end)()
+
+	self._seq = nil
+	self._session_id = nil
+	self._ready = false
+	self._loading = {guilds = {}, chunks = {}, syncs = {}}
+
+	return self:_send(IDENTIFY, {
 		token = client._token,
 		properties = {
 			['$os'] = jit.os,
@@ -216,18 +226,6 @@ function Shard:identify()
 		presence = next(client._presence) and client._presence,
 		intents = client._intents,
 	}, true)
-	mutex:unlock()
-
-	wrap(function()
-		self:identifyWait()
-	end)()
-
-	self._seq = nil
-	self._session_id = nil
-	self._ready = false
-	self._loading = {guilds = {}, chunks = {}, syncs = {}}
-
-	return result
 
 end
 
