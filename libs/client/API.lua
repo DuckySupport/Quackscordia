@@ -118,7 +118,6 @@ local API = require('class')('API')
 function API:__init(client)
     self._client = client
     self._mutexes = setmetatable({}, mutexMeta)
-    self._global_ratelimit_reset_after = 0 -- Global rate limit
 end
 
 function API:authenticate(token)
@@ -168,7 +167,6 @@ function API:request(method, endpoint, payload, query, files)
 			insert(req, {'Content-Type', JSON})
 		end
 		insert(req, {'Content-Length', #payload})
-        insert(req, {"Connection", "close"})
 	end
 
 	local mutex = self._mutexes[route(method, endpoint)]
