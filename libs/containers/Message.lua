@@ -74,6 +74,7 @@ function Message:_loadMore(data)
 		end
 		self._referencedMessage = self._parent._messages:_insert(data.referenced_message)
 	elseif data.message_reference and data.message_reference ~= null then
+		self._raw_reference = data.message_reference
 		local guild = self.client:getGuild(data.message_reference.guild_id)
 		local channel = guild and guild:getChannel(data.message_reference.channel_id)
 		local message = channel and channel:getMessage(data.message_reference.message_id)
