@@ -358,7 +358,7 @@ function TextChannel:send(content, silent)
 			message_reference = refMessage,
 			allowed_mentions = allowedMentions,
 			sticker_ids = sticker,
-			flags = tbl.suppress and 2^12 or nil,
+			flags = (tbl.suppress and 2^12) or (tbl.flags) or nil,
 			poll = poll or nil,
 			components = components
 		}
