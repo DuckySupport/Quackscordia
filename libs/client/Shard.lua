@@ -196,6 +196,7 @@ end
 
 function Shard:heartbeat()
 	self:info("Sending heartbeat (" .. (self._seq or "no seq") .. ")")
+	client:emit('heartbeatSend', self._id, self._seq)
 	self._sw:reset()
 	local success, err = self:_send(HEARTBEAT, self._seq or json.null)
 	if not success then
