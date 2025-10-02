@@ -174,14 +174,14 @@ function TextChannel:getPinnedMessages()
 	end
 end
 
-function TextChannel:bulkDelete(messages)
+function TextChannel:bulkDelete(messages, reason)
 	if not self.guild then return false, "cannot purge messages in DMs" end
 	messages = Resolver.messageIds(messages)
 	local data, err
 	if #messages == 1 then
 		data, err = self.client._api:deleteMessage(self._id, messages[1])
 	else
-		data, err = self.client._api:bulkDeleteMessages(self._id, {messages = messages})
+		data, err = self.client._api:bulkDeleteMessages(self._id, {messages = messages}, reason)
 	end
 	if data then
 		return true

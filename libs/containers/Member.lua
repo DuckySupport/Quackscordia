@@ -296,10 +296,10 @@ end
 @d Adds a role to the member. If the member already has the role, then no action is
 taken. Note that the everyone role cannot be explicitly added.
 ]=]
-function Member:addRole(id)
+function Member:addRole(id, reason)
 	if self:hasRole(id) then return true end
 	id = Resolver.roleId(id)
-	local data, err = self.client._api:addGuildMemberRole(self._parent._id, self.id, id)
+	local data, err = self.client._api:addGuildMemberRole(self._parent._id, self.id, id, nil, reason)
 	if data then
 		local roles = self._roles and self._roles._array or self._roles_raw
 		if roles then
@@ -321,10 +321,10 @@ end
 @d Removes a role from the member. If the member does not have the role, then no
 action is taken. Note that the everyone role cannot be removed.
 ]=]
-function Member:removeRole(id)
+function Member:removeRole(id, reason)
 	if not self:hasRole(id) then return true end
 	id = Resolver.roleId(id)
-	local data, err = self.client._api:removeGuildMemberRole(self._parent._id, self.id, id)
+	local data, err = self.client._api:removeGuildMemberRole(self._parent._id, self.id, id, reason)
 	if data then
 		local roles = self._roles and self._roles._array or self._roles_raw
 		if roles then

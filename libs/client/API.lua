@@ -125,8 +125,8 @@ function API:authenticate(token)
     return self:getCurrentUser()
 end
 
-function API:request(method, endpoint, payload, query, files)
-    if payload then
+function API:request(method, endpoint, payload, query, files, reason)
+    if payload and payloadRequired[method] then
         payload = deepcopy(payload)
     end
 
@@ -169,12 +169,15 @@ function API:request(method, endpoint, payload, query, files)
 		insert(req, {'Content-Length', #payload})
 	end
 
+    if reason then
+        insert(req, {'X-Audit-Log-Reason', reason})
+    end
+
 	local mutex = self._mutexes[route(method, endpoint)]
 
 	mutex:lock()
 	local data, err, delay = self:commit(method, url, req, payload, 0)
 	mutex:unlockAfter(delay)
-
 	if data then
 		return data
 	else
@@ -344,9 +347,9 @@ function API:deleteMessage(channel_id, message_id) -- Message:delete
     return self:request("DELETE", endpoint)
 end
 
-function API:bulkDeleteMessages(channel_id, payload) -- GuildTextChannel:bulkDelete
+function API:bulkDeleteMessages(channel_id, payload, reason) -- GuildTextChannel:bulkDelete
     local endpoint = f(endpoints.CHANNEL_MESSAGES_BULK_DELETE, channel_id)
-    return self:request("POST", endpoint, payload)
+    return self:request("POST", endpoint, payload, nil, nil, reason)
 end
 
 function API:editChannelPermissions(channel_id, overwrite_id, payload) -- various PermissionOverwrite methods
@@ -514,14 +517,14 @@ function API:modifyCurrentMember(guild_id, payload) -- Member:setNickname, Guild
     return self:request("PATCH", endpoint, payload)
 end
 
-function API:addGuildMemberRole(guild_id, user_id, role_id, payload) -- Member:addrole
+function API:addGuildMemberRole(guild_id, user_id, role_id, payload, reason) -- Member:addrole
     local endpoint = f(endpoints.GUILD_MEMBER_ROLE, guild_id, user_id, role_id)
-    return self:request("PUT", endpoint, payload)
+    return self:request("PUT", endpoint, payload, nil, nil, reason)
 end
 
-function API:removeGuildMemberRole(guild_id, user_id, role_id) -- Member:removeRole
+function API:removeGuildMemberRole(guild_id, user_id, role_id, reason) -- Member:removeRole
     local endpoint = f(endpoints.GUILD_MEMBER_ROLE, guild_id, user_id, role_id)
-    return self:request("DELETE", endpoint)
+    return self:request("DELETE", endpoint, nil, nil, nil, reason)
 end
 
 function API:removeGuildMember(guild_id, user_id, query) -- Guild:kickUser
@@ -699,9 +702,9 @@ function API:modifyVoiceStatus(channel_id, status)
     return self:request("PUT", endpoint, {status = status})
 end
 
-function API:createWebhook(channel_id, payload) -- GuildTextChannel:createWebhook
+function API:createWebhook(channel_id, payload, reason) -- GuildTextChannel:createWebhook
     local endpoint = f(endpoints.CHANNEL_WEBHOOKS, channel_id)
-    return self:request("POST", endpoint, payload)
+    return self:request("POST", endpoint, payload, nil, nil, reason)
 end
 
 function API:getChannelWebhooks(channel_id) -- GuildTextChannel:getWebhooks

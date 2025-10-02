@@ -33,8 +33,8 @@ end
 @d Creates a webhook for this channel. The name must be between 2 and 32 characters
 in length.
 ]=]
-function GuildTextChannel:createWebhook(name)
-	local data, err = self.client._api:createWebhook(self._id, {name = name})
+function GuildTextChannel:createWebhook(name, reason)
+	local data, err = self.client._api:createWebhook(self._id, {name = name}, reason)
 	if data then
 		return Webhook(data, self.client)
 	else
@@ -67,13 +67,13 @@ end
 @d Bulk deletes multiple messages, from 2 to 100, from the channel. Messages over
 2 weeks old cannot be deleted and will return an error.
 ]=]
-function GuildTextChannel:bulkDelete(messages)
+function GuildTextChannel:bulkDelete(messages, reason)
 	messages = Resolver.messageIds(messages)
 	local data, err
 	if #messages == 1 then
 		data, err = self.client._api:deleteMessage(self._id, messages[1])
 	else
-		data, err = self.client._api:bulkDeleteMessages(self._id, {messages = messages})
+		data, err = self.client._api:bulkDeleteMessages(self._id, {messages = messages}, reason)
 	end
 	if data then
 		return true
