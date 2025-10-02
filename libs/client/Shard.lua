@@ -155,7 +155,7 @@ function Shard:handlePayload(payload)
 	elseif op == HEARTBEAT_ACK then
 
 		self:info("Received HEARTBEAT_ACK")
-		client:emit('heartbeat', self._id, self._sw.milliseconds)
+		client:emit('heartbeatAcknowledge', self._id, self._sw.milliseconds)
 
 	elseif op then
 
@@ -196,7 +196,7 @@ end
 
 function Shard:heartbeat()
 	self:info("Sending heartbeat (" .. (self._seq or "no seq") .. ")")
-	client:emit('heartbeatSend', self._id, self._seq)
+	self._client:emit('heartbeatSend', self._id, self._seq)
 	self._sw:reset()
 	local success, err = self:_send(HEARTBEAT, self._seq or json.null)
 	if not success then
