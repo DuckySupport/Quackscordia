@@ -46,17 +46,11 @@ function WebSocket:connect(url, path)
 		self:info('Connected to %s', url)
 		local parent = self._parent
 		for message in self._read do
-			local b = false
-			coroutine.wrap(function()
-				local payload, str = self:parseMessage(message)
-				if not payload then b = true return end
-				parent:emit('raw', str)
-				if self.handlePayload then -- virtual method
-					self:handlePayload(payload)
-				end
-			end)()
-			if b then
-				break
+			local payload, str = self:parseMessage(message)
+			if not payload then b = true return end
+			parent:emit('raw', str)
+			if self.handlePayload then -- virtual method
+				self:handlePayload(payload)
 			end
 		end
 		self:info('Disconnected')
