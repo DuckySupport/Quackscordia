@@ -122,6 +122,7 @@ function Shard:handlePayload(payload)
 
 	elseif op == HEARTBEAT then
 
+		self:info("Received HEARTBEAT")
 		self:heartbeat()
 
 	elseif op == RECONNECT then
@@ -153,6 +154,7 @@ function Shard:handlePayload(payload)
 
 	elseif op == HEARTBEAT_ACK then
 
+		self:info("Received HEARTBEAT_ACK")
 		client:emit('heartbeat', self._id, self._sw.milliseconds)
 
 	elseif op then
@@ -164,11 +166,13 @@ function Shard:handlePayload(payload)
 end
 
 local function loop(self)
+	self:info("Heartbeat loop triggered")
 	decrementReconnectTime(self)
 	return wrap(self.heartbeat)(self)
 end
 
 function Shard:startHeartbeat(interval)
+	self:info("Starting heartbeat with interval " .. tostring(interval) .. "s")
 	if self._heartbeat then
 		clearInterval(self._heartbeat)
 	end
@@ -176,6 +180,7 @@ function Shard:startHeartbeat(interval)
 end
 
 function Shard:stopHeartbeat()
+	self:info("Stopping heartbeat...")
 	if self._heartbeat then
 		clearInterval(self._heartbeat)
 	end
