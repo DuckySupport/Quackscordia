@@ -191,7 +191,11 @@ end
 
 function Shard:heartbeat()
 	self._sw:reset()
-	return self:_send(HEARTBEAT, self._seq or json.null)
+	local success, err = self:_send(HEARTBEAT, self._seq or json.null)
+	if not success then
+		self._client:error("Shard " .. self._id .. " : Failed to send heartbeat: " .. tostring(err))
+	end
+	return success, err
 end
 
 function Shard:identify()
