@@ -122,7 +122,6 @@ function Shard:handlePayload(payload)
 
 	elseif op == HEARTBEAT then
 
-		self:info("Received HEARTBEAT")
 		self:heartbeat()
 
 	elseif op == RECONNECT then
@@ -154,8 +153,7 @@ function Shard:handlePayload(payload)
 
 	elseif op == HEARTBEAT_ACK then
 
-		self:info("Received HEARTBEAT_ACK")
-		client:emit('heartbeatAcknowledge', self._id, self._sw.milliseconds)
+		client:emit('heartbeatAcknowledged', self._id, self._sw.milliseconds)
 
 	elseif op then
 
@@ -189,18 +187,17 @@ end
 
 function Shard:identifyWait()
 	if self:waitFor('READY', 1.5 * ID_DELAY) then
-		self:info("Received READY after identification, sleeping " .. tostring(ID_DELAY) .. "ms", self._id)
 		return sleep(ID_DELAY)
 	end
 end
 
 function Shard:heartbeat()
-	self:info("Sending heartbeat (" .. (self._seq or "no seq") .. ")")
-	self._client:emit('heartbeatSend', self._id, self._seq)
 	self._sw:reset()
 	local success, err = self:_send(HEARTBEAT, self._seq or json.null)
 	if not success then
 		self._client:error("Shard " .. self._id .. " : Failed to send heartbeat: " .. tostring(err))
+	else
+		self._client:emit('heartbeatSent', self._id, self._seq)
 	end
 	return success, err
 end
