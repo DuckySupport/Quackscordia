@@ -172,7 +172,7 @@ local function loop(self)
 end
 
 function Shard:startHeartbeat(interval)
-	self:info("Starting heartbeat with interval " .. tostring(interval) .. "s")
+	self:info("Starting heartbeat with interval " .. tostring(interval) .. "ms")
 	if self._heartbeat then
 		clearInterval(self._heartbeat)
 	end
