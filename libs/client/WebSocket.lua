@@ -48,13 +48,18 @@ function WebSocket:connect(url, path)
 		for message in self._read do
 			local payload, str = self:parseMessage(message)
 			if not payload then
-				self:error("Breaking read loop, message: " .. json.encode(message or {empty = true}))
+				if _G.Client then
+					_G.Client:error('Breaking read loop, message: ' .. json.encode(message or {empty = true}))
+				end
 				break
 			end
 			parent:emit('raw', str)
 			if self.handlePayload then -- virtual method
 				self:handlePayload(payload)
 			end
+		end
+		if _G.Client then
+			self:error('self._read: ' .. tostring(self._read) .. ' | self._write: ' .. tostring(self._write))
 		end
 		self:info('Disconnected')
 	else
