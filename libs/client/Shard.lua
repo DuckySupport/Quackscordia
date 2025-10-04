@@ -196,6 +196,7 @@ function Shard:heartbeat()
 	local success, err = self:_send(HEARTBEAT, self._seq or json.null)
 	if not success then
 		self._client:error("Shard " .. self._id .. " : Failed to send heartbeat: " .. tostring(err))
+		self._client:emit('heartbeatFailure', self._id, err)
 	else
 		self._client:emit('heartbeatSent', self._id, self._seq)
 	end
