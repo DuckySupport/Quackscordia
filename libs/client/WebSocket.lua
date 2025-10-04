@@ -46,6 +46,8 @@ function WebSocket:connect(url, path)
 		self:info('Connected to %s', url)
 		local parent = self._parent
 		for message in self._read do
+			p("self._read", message)
+			print("> parsing")
 			local payload, str = self:parseMessage(message)
 			if not payload then
 				if _G.Client then
@@ -53,10 +55,13 @@ function WebSocket:connect(url, path)
 				end
 				break
 			end
+			print("> emitting raw")
 			parent:emit('raw', str)
 			if self.handlePayload then -- virtual method
+				print("> handling payload")
 				self:handlePayload(payload)
 			end
+			print("> done")
 		end
 		if _G.Client then
 			self:error('self._read: ' .. tostring(self._read) .. ' | self._write: ' .. tostring(self._write))
