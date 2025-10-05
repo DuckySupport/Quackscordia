@@ -252,7 +252,6 @@ sent as the message content. If it is a table, more advanced formatting is
 allowed. See [[managing messages]] for more information.
 ]=]
 function TextChannel:send(content, silent)
-	local original = content
     local data, err
 
 	if type(content) == 'table' then
@@ -364,10 +363,6 @@ function TextChannel:send(content, silent)
 		}
 
 		data, err = self.client._api:createMessage(self._id, tosend, files)
-
-		if err and type(err) == "string" and err:lower():find("cannot send an empty message") then
-			p("discord called it an empty message", original, tosend)
-		end
 
 	else
 		data, err = self.client._api:createMessage(self._id, {content = content})

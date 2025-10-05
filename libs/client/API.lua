@@ -126,7 +126,7 @@ function API:authenticate(token)
 end
 
 function API:request(method, endpoint, payload, query, files, reason)
-    if payload and payloadRequired[method] then
+    if payload then
         payload = deepcopy(payload)
     end
 
