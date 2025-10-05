@@ -27,12 +27,16 @@ local function checkReady(shard)
 end
 
 local function getChannel(client, d)
+	print("getChannel before")
 	local channel = client:getChannel(d.channel_id)
+	print("getChannel after")
 	if channel and channel._messages then
 		return channel
 	end
 
+	print("_api.getChannel before")
 	local data = client._api:getChannel(d.channel_id)
+	print("_api.getChannel after")
 	if data then
 		if data.type == channelType.private then
 			channel = client._private_channels:_insert(data)
