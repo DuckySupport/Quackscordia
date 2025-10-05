@@ -105,11 +105,10 @@ function Emitter:emit(name, ...)
 				    _G.Client:error("Avoided fatal:\n    " .. e .. "\n\n")
 				end
 			else
-				local wrapped = wrap(fn)
-				local s, e = pcall(wrapped, ...)
-				if not s then
-				    _G.Client:error("Avoided fatal:\n    " .. e .. "\n\n")
-				end
+				timer.setImmediate(function()
+					local s, e = pcall(fn, ...)
+					if not s then _G.Client:error("Avoided fatal:\n    " .. e .. "\n\n") end
+				end)
 			end
 		end
 	end

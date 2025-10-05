@@ -117,10 +117,7 @@ function Shard:handlePayload(payload)
 
 		self._seq = s
 		if not ignore[t] then
-			local success, err = pcall(EventHandler[t], d, client, self)
-			if not success then
-				self:error("EventHandler " .. tostring(t) .. ": " .. tostring(err))
-			end
+			EventHandler[t](d, client, self)
 		end
 
 	elseif op == HEARTBEAT then
