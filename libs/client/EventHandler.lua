@@ -350,17 +350,28 @@ function EventHandler.GUILD_ROLE_DELETE(d, client) -- role object not provided
 end
 
 function EventHandler.MESSAGE_CREATE(d, client)
+	print("> EventHandler.MESSAGE_CREATE", tostring(d), tostring(client))
 	local channel = getChannel(client, d)
+	print("> fetched channel", tostring(channel))
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_CREATE') end
+	print("> checking thread")
 	if THREAD_TYPES[channel._type] then
+		print("> thread", tostring(channel._type))
 		channel._message_count = channel._message_count + 1
 		channel._total_message_sent = channel._total_message_sent + 1
 	end
 
+	print("> splitting")
     local split = string.split(d.content or "", " && ")
+	print("> iterating")
     for i, content in pairs(split) do
+		print("> iterate", tostring(i), tostring(content))
         d.content = content
-        client:emit('messageCreate', channel._messages:_insert(d))
+		print("> inserting new")
+		local new = channel._messages:_insert(d)
+		print("> emitting new", tostring(new))
+        client:emit('messageCreate', new)
+		print("> emitted new")
 
         if i >= 3 then
             break
