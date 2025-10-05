@@ -61,7 +61,7 @@ function WebSocket:connect(url, path)
 				print("> handling payload")
 				self:handlePayload(payload)
 			end
-			print("> done")
+			print("> done reading websocket message")
 		end
 		if _G.Client then
 			self:error('self._read: ' .. tostring(self._read) .. ' | self._write: ' .. tostring(self._write))
