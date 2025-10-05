@@ -27,13 +27,18 @@ local function checkReady(shard)
 end
 
 local function getChannel(client, d)
+	print("> client:getChannel")
 	local channel = client:getChannel(d.channel_id)
+	print("> done")
 	if channel and channel._messages then
 		return channel
 	end
 
+	print("> _api:getChannel")
 	local data = client._api:getChannel(d.channel_id)
+	print("> done")
 	if data then
+		print("> data", tostring(data.type))
 		if data.type == channelType.private then
 			channel = client._private_channels:_insert(data)
 		elseif data.type == channelType.group then
@@ -44,7 +49,9 @@ local function getChannel(client, d)
 				channel = parent_channel._thread_channels:_insert(data, parent_channel)
 			end
 		end
+		print("> processed data")
 	end
+	print("> returning ", tostring(channel and channel._messages and channel))
 	return channel and channel._messages and channel
 end
 
