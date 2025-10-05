@@ -106,10 +106,10 @@ function Emitter:emit(name, ...)
 				end
 			else
 				local args = {...}
-				timer.setImmediate(function()
+				coroutine.wrap(function()
 					local s, e = pcall(fn, table.unpack(args))
 					if not s then _G.Client:error("Avoided fatal:\n    " .. e .. "\n\n") end
-				end)
+				end)()
 			end
 		end
 	end
