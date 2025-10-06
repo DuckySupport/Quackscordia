@@ -117,9 +117,7 @@ function Shard:handlePayload(payload)
 
 		self._seq = s
 		if not ignore[t] then
-			coroutine.wrap(function()
-				pcall(EventHandler[t], d, client, self)
-			end)()
+			EventHandler[t](d, client, self)
 		end
 
 	elseif op == HEARTBEAT then
