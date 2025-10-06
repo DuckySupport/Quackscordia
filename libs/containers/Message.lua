@@ -76,7 +76,7 @@ function Message:_loadMore(data)
 	elseif data.message_reference and data.message_reference ~= null then
 		local guild = self.client:getGuild(data.message_reference.guild_id)
 		local channel = guild and guild:getChannel(data.message_reference.channel_id)
-		local message = channel and channel:getMessage(data.message_reference.message_id)
+		local message = channel and channel._messages and channel._messages:get(data.message_reference.message_id)
 		self._forwardedMessage = message or nil
 	end
 
