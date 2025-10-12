@@ -45,19 +45,14 @@ end
 
 function table.concatFn(tbl, connector, fn)
     if (not tbl) or (not connector) or (not fn) then return "" end
-	local ret = ""
-	local c = 0
-
+	local results = {}
 	for i, v in pairs(tbl) do
 		local n = fn(v, i)
-
 		if n ~= "" then
-			c = c + 1
-			ret = ret .. n .. ((c < table.count(tbl) and connector) or "")
+			table.insert(results, n)
 		end
 	end
-
-	return ret
+	return table.concat(results, connector)
 end
 
 function table.copy(tbl)
