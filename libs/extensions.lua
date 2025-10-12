@@ -49,10 +49,10 @@ function table.concatFn(tbl, connector, fn)
 	for i, v in pairs(tbl) do
 		local n = fn(v, i)
 		if n ~= "" then
-			table.insert(results, n)
+			insert(results, n)
 		end
 	end
-	return table.concat(results, connector)
+	return concat(results, connector)
 end
 
 function table.copy(tbl)
