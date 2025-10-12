@@ -200,7 +200,7 @@ function API:commit(method, url, req, payload, retries)
 	local options = client._options
 	local delay = options.routeDelay
 
-	local success, res, msg = pcall(request, method, url, req, payload)
+	local success, res, msg = pcall(request, method, url, req, payload, 3000)
 
 	if not success then
 		return nil, res, delay
