@@ -49,8 +49,12 @@ function table.concatFn(tbl, connector, fn)
 	local c = 0
 
 	for i, v in pairs(tbl) do
-		c = c + 1
-		ret = ret .. fn(v, i) .. ((c < table.count(tbl) and connector) or "")
+		local n = fn(v, i)
+
+		if n ~= "" then
+			c = c + 1
+			ret = ret .. n .. ((c < table.count(tbl) and connector) or "")
+		end
 	end
 
 	return ret
