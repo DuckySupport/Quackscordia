@@ -141,10 +141,20 @@ function User:fail(content, emoji)
 		return nil, err
 	end
 end
+
 function User:heavyred(content, emoji)
 	local channel, err = self:getPrivateChannel()
 	if channel then
 		return channel:heavyred(content, emoji)
+	else
+		return nil, err
+	end
+end
+
+function User:loading(content, emoji)
+	local channel, err = self:getPrivateChannel()
+	if channel then
+		return channel:loading(content, emoji)
 	else
 		return nil, err
 	end
