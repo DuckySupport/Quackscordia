@@ -480,6 +480,35 @@ function Message:crosspost()
 	end
 end
 
+function Message:forward(channel)
+	local data, err = self.client._api:createMessage(channel._id, {
+		flags = 16384,
+		message_reference = {
+			type = 1,
+			message_id = self._id,
+			channel_id = self._parent._id,
+			guild_id = self._parent.guild and self._parent.guild._id or null
+		},
+		message_snapshots = {
+			{
+				message = {
+					type = self._type,
+					content = self._content,
+					embeds = self._embeds,
+					attachments = self._attachments or null,
+					components = self._components or null,
+					flags = self._flags or 0
+				}
+			}
+		}
+	})
+	if data then
+		return channel._messages:_insert(data)
+	else
+		return nil, err
+	end
+end
+
 --[=[
 @m startThread
 @t http
