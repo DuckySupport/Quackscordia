@@ -396,6 +396,11 @@ function TextChannel:heavyred(content, emoji)
 	return self:send({embed = {description = emoji .. " " .. content, color = _G.colors.heavyred}})
 end
 
+function TextChannel:loading(content, emoji)
+	emoji = emoji or _G.emojis.loading
+	return self:send({embed = {description = emoji .. " " .. content, color = _G.colors.blank}})
+end
+
 --[=[
 @m sendf
 @t http
