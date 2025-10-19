@@ -480,7 +480,7 @@ function Message:crosspost()
 	end
 end
 
-function Message:forward(channel)
+function Message:forward(channel, content)
 	local data, err = self.client._api:createMessage(channel._id, {
 		flags = 16384,
 		message_reference = {
@@ -500,7 +500,8 @@ function Message:forward(channel)
 					flags = self._flags or 0
 				}
 			}
-		}
+		},
+		content = content
 	})
 	if data then
 		return channel._messages:_insert(data)
