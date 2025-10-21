@@ -365,7 +365,7 @@ function TextChannel:send(content, silent)
 		data, err = self.client._api:createMessage(self._id, tosend, files)
 
 	else
-		data, err = self.client._api:createMessage(self._id, {content = content})
+		data, err = self.client._api:createMessage(self._id, {content = content, allowed_mentions = silent and {parse = {}} or nil})
 	end
 
 	if data then
