@@ -118,22 +118,6 @@ function Guild:_modify(payload)
 end
 
 --[=[
-@m fetch
-@t http
-@r Guild
-@d Fetches the full guild data from the API and updates the guild object's properties.
-]=]
-function Guild:fetch()
-	local data, err = self.client._api:getGuild(self._id)
-	if data then
-		self:_load(data)
-		return self
-	else
-		return nil, err
-	end
-end
-
---[=[
 @m requestMembers
 @t ws
 @r boolean
@@ -207,13 +191,7 @@ end
 ]=]
 function Guild:getChannel(id)
 	id = Resolver.channelId(id)
-	local channel = self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id) or self._categories:get(id)
-	if channel then
-		return channel
-	else
-		-- Fallback to client's getChannel, which can fetch from API
-		return self.client:getChannel(id)
-	end
+	return self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id) or self._categories:get(id)
 end
 
 --[=[

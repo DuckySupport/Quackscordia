@@ -16,6 +16,6 @@
 - **Improved Event Handling:** Event handlers are now more robust and can handle events from uncached guilds.
 - **New Events:**
     - `emojisUpdate` - fired when a guild's emojis are updated.
-    - `guild:fetch()` - fetches the full guild data from the API and updates the guild object's properties..
+    - `channelsUpdate` - fired when a guild's channels are updated.
 - **Removed Events/Functions:**
     - Removed internal `GUILD_MEMBERS_CHUNK` and `GUILD_SYNC` logic that was tied to the old caching system.

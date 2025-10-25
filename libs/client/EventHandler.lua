@@ -43,10 +43,8 @@ function EventHandler.READY(d, client, shard)
 		end
 	end
 
-if d.user.bot then
-		for _, guild in ipairs(d.guilds) do
-			client._guild_ids[guild.id] = true
-		end
+	if d.user.bot then
+		guilds:_load(d.guilds)
 	else
 		if client._options.syncGuilds then
 			local ids = {}
@@ -216,7 +214,6 @@ function EventHandler.GUILD_CREATE(d, client, shard)
 		end
 	else
 		guild = client._guilds:_insert(d)
-		client._guild_ids[d.id] = true
 		return client:emit('guildCreate', guild)
 	end
 	if d.channels then
@@ -246,7 +243,6 @@ function EventHandler.GUILD_DELETE(d, client)
 		return client:emit('guildUnavailable', guild)
 	else
 		local guild = client._guilds:_remove(d)
-		client._guild_ids[d.id] = nil
 		return client:emit('guildDelete', guild)
 	end
 end
