@@ -29,7 +29,6 @@ local GuildChannel, get = class('GuildChannel', Channel)
 
 function GuildChannel:__init(data, parent)
 	Channel.__init(self, data, parent)
-	self.client._channel_map[self._id] = parent
 	-- self._permission_overwrites = Cache({}, PermissionOverwrite, self)
 	self._thread_channels = SecondaryCache(GuildThreadChannel, self._parent._thread_channels)
 	return self:_loadMore(data)

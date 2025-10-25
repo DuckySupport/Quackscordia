@@ -8,51 +8,9 @@ local null = json.null
 local THREAD_TYPES = require('constants').THREAD_TYPES
 
 local function warning(client, object, id, event)
+
 	return client:warning('Uncached %s (%s) on %s', object, id, event)
-end
 
-local function checkReady(shard)
-	for _, v in pairs(shard._loading) do
-		if next(v) then return end
-	end
-	shard._ready = true
-	shard._loading = nil
-	collectgarbage()
-	local client = shard._client
-	client:emit('shardReady', shard._id)
-	for _, other in pairs(client._shards) do
-		if not other._ready then return end
-	end
-	return client:emit('ready')
-end
-
-local function getChannel(client, d)
-	print("> client:getChannel")
-	local channel = client:getChannel(d.channel_id)
-	print("> done")
-	if channel and channel._messages then
-		return channel
-	end
-
-	print("> _api:getChannel")
-	local data = client._api:getChannel(d.channel_id)
-	print("> done")
-	if data then
-		print("> data", tostring(data.type))
-		if data.type == channelType.private then
-			channel = client._private_channels:_insert(data)
-		elseif data.type == channelType.group then
-			channel = client._group_channels:_insert(data)
-		elseif THREAD_TYPES[data.type] then
-			local parent_channel = getChannel(client, {channel_id = data.parent_id})
-			if parent_channel then
-				channel = parent_channel._thread_channels:_insert(data, parent_channel)
-			end
-		end
-		print("> processed data")
-	end
-	print("> returning ", tostring(channel and channel._messages and channel))
-	return channel and channel._messages and channel
 end
 
 local EventHandler = setmetatable({}, {__index = function(self, k)
@@ -85,20 +43,14 @@ function EventHandler.READY(d, client, shard)
 		end
 	end
 
-	local loading = shard._loading
-
 	if d.user.bot then
-		for _, guild in ipairs(d.guilds) do
-			guilds:_insert(guild)
-			loading.guilds[guild.id] = true
-		end
+		guilds:_load(d.guilds)
 	else
 		if client._options.syncGuilds then
 			local ids = {}
 			for _, guild in ipairs(d.guilds) do
 				guilds:_insert(guild)
 				if not guild.unavailable then
-					loading.syncs[guild.id] = true
 					insert(ids, guild.id)
 				end
 			end
@@ -117,7 +69,12 @@ function EventHandler.READY(d, client, shard)
 		end
 	end
 
-	return checkReady(shard)
+	shard._ready = true
+	client:emit('shardReady', shard._id)
+	for _, other in pairs(client._shards) do
+		if not other._ready then return end
+	end
+	return client:emit('ready')
 
 end
 
@@ -127,39 +84,29 @@ function EventHandler.RESUMED(_, client, shard)
 end
 
 function EventHandler.GUILD_MEMBERS_CHUNK(d, client, shard)
-	local guild = client._guilds:get(d.guild_id)
-	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_MEMBERS_CHUNK') end
-	guild._members:_load(d.members)
-	if shard._loading and guild._member_count == #guild._members then
-		shard._loading.chunks[d.guild_id] = nil
-		return checkReady(shard)
-	end
 end
 
 function EventHandler.GUILD_SYNC(d, client, shard)
-	local guild = client._guilds:get(d.id)
-	if not guild then return warning(client, 'Guild', d.id, 'GUILD_SYNC') end
-	guild._large = d.large
-	guild:_loadMembers(d, shard)
-	if shard._loading then
-		shard._loading.syncs[d.id] = nil
-		return checkReady(shard)
-	end
 end
+
+function EventHandler.INTERACTION_CREATE(d, client, shard)
+end
+
+
 
 function EventHandler.CHANNEL_CREATE(d, client)
 	local channel
 	local t = d.type
 	if t == channelType.text or t == channelType.news then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_CREATE') end
 		channel = guild._text_channels:_insert(d)
 	elseif t == channelType.forum then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_CREATE') end
 		channel = guild._forum_channels:_insert(d)
 	elseif t == channelType.voice then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_CREATE') end
 		channel = guild._voice_channels:_insert(d)
 	elseif t == channelType.private then
@@ -167,7 +114,7 @@ function EventHandler.CHANNEL_CREATE(d, client)
 	elseif t == channelType.group then
 		channel = client._group_channels:_insert(d)
 	elseif t == channelType.category then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_CREATE') end
 		channel = guild._categories:_insert(d)
 	else
@@ -182,15 +129,15 @@ function EventHandler.CHANNEL_UPDATE(d, client)
 	local channel
 	local t = d.type
 	if t == channelType.text or t == channelType.news then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_UPDATE') end
 		channel = guild._text_channels:_insert(d)
 	elseif t == channelType.forum then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_UPDATE') end
 		channel = guild._forum_channels:_insert(d)
 	elseif t == channelType.voice then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_UPDATE') end
 		channel = guild._voice_channels:_insert(d)
 	elseif t == channelType.private then -- private channels should never update
@@ -198,7 +145,7 @@ function EventHandler.CHANNEL_UPDATE(d, client)
 	elseif t == channelType.group then
 		channel = client._group_channels:_insert(d)
 	elseif t == channelType.category then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_UPDATE') end
 		channel = guild._categories:_insert(d)
 	else
@@ -213,15 +160,15 @@ function EventHandler.CHANNEL_DELETE(d, client)
 	local channel
 	local t = d.type
 	if t == channelType.text or t == channelType.news then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_DELETE') end
 		channel = guild._text_channels:_remove(d)
 	elseif t == channelType.forum then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_DELETE') end
 		channel = guild._forum_channels:_remove(d)
 	elseif t == channelType.voice then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_DELETE') end
 		channel = guild._voice_channels:_remove(d)
 	elseif t == channelType.private then
@@ -229,7 +176,7 @@ function EventHandler.CHANNEL_DELETE(d, client)
 	elseif t == channelType.group then
 		channel = client._group_channels:_remove(d)
 	elseif t == channelType.category then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'CHANNEL_DELETE') end
 		channel = guild._categories:_remove(d)
 	else
@@ -265,18 +212,28 @@ function EventHandler.GUILD_CREATE(d, client, shard)
 			guild:_makeAvailable(d)
 			client:emit('guildAvailable', guild)
 		end
-		if shard._loading then
-			shard._loading.guilds[d.id] = nil
-			return checkReady(shard)
-		end
 	else
 		guild = client._guilds:_insert(d)
 		return client:emit('guildCreate', guild)
+	end
+	if d.channels then
+		guild._text_channels:_load(d.channels)
+		guild._voice_channels:_load(d.channels)
+		guild._forum_channels:_load(d.channels)
+		guild._categories:_load(d.channels)
+		client:emit('channelsUpdate', guild, d.channels)
 	end
 end
 
 function EventHandler.GUILD_UPDATE(d, client)
 	local guild = client._guilds:_insert(d)
+	if d.channels then
+		guild._text_channels:_load(d.channels)
+		guild._voice_channels:_load(d.channels)
+		guild._forum_channels:_load(d.channels)
+		guild._categories:_load(d.channels)
+		client:emit('channelsUpdate', guild, d.channels)
+	end
 	return client:emit('guildUpdate', guild)
 end
 
@@ -291,58 +248,62 @@ function EventHandler.GUILD_DELETE(d, client)
 end
 
 function EventHandler.GUILD_BAN_ADD(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_BAN_ADD') end
 	local user = client._users:_insert(d.user)
 	return client:emit('userBan', user, guild)
 end
 
 function EventHandler.GUILD_BAN_REMOVE(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_BAN_REMOVE') end
 	local user = client._users:_insert(d.user)
 	return client:emit('userUnban', user, guild)
 end
 
 function EventHandler.GUILD_MEMBER_ADD(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_MEMBER_ADD') end
 	local member = guild._members:_insert(d)
-	guild._member_count = guild._member_count + 1
+	if guild._member_count then
+		guild._member_count = guild._member_count + 1
+	end
 	return client:emit('memberJoin', member)
 end
 
 function EventHandler.GUILD_MEMBER_UPDATE(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_MEMBER_UPDATE') end
 	local member = guild._members:_insert(d)
 	return client:emit('memberUpdate', member)
 end
 
 function EventHandler.GUILD_MEMBER_REMOVE(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_MEMBER_REMOVE') end
 	local member = guild._members:_remove(d)
-	guild._member_count = guild._member_count - 1
+	if guild._member_count then
+		guild._member_count = guild._member_count - 1
+	end
 	return client:emit('memberLeave', member)
 end
 
 function EventHandler.GUILD_ROLE_CREATE(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_ROLE_CREATE') end
 	local role = guild._roles:_insert(d.role)
 	return client:emit('roleCreate', role)
 end
 
 function EventHandler.GUILD_ROLE_UPDATE(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_ROLE_UPDATE') end
 	local role = guild._roles:_insert(d.role)
 	return client:emit('roleUpdate', role)
 end
 
 function EventHandler.GUILD_ROLE_DELETE(d, client) -- role object not provided
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_ROLE_DELETE') end
 	local role = guild._roles:_delete(d.role_id)
 	if not role then return warning(client, 'Role', d.role_id, 'GUILD_ROLE_DELETE') end
@@ -350,28 +311,18 @@ function EventHandler.GUILD_ROLE_DELETE(d, client) -- role object not provided
 end
 
 function EventHandler.MESSAGE_CREATE(d, client)
-	print("> EventHandler.MESSAGE_CREATE", tostring(d), tostring(client))
-	local channel = getChannel(client, d)
-	print("> fetched channel", tostring(channel))
+	local channel = client:getChannel(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_CREATE') end
-	print("> checking thread")
 	if THREAD_TYPES[channel._type] then
-		print("> thread", tostring(channel._type))
 		channel._message_count = channel._message_count + 1
 		channel._total_message_sent = channel._total_message_sent + 1
 	end
 
-	print("> splitting")
     local split = string.split(d.content or "", " && ")
-	print("> iterating")
     for i, content in pairs(split) do
-		print("> iterate", tostring(i), tostring(content))
         d.content = content
-		print("> inserting new")
 		local new = channel._messages:_insert(d)
-		print("> emitting new", tostring(new))
         client:emit('messageCreate', new)
-		print("> emitted new")
 
         if i >= 3 then
             break
@@ -380,7 +331,7 @@ function EventHandler.MESSAGE_CREATE(d, client)
 end
 
 function EventHandler.MESSAGE_UPDATE(d, client) -- may not contain the whole message
-	local channel = getChannel(client, d)
+	local channel = client:getChannel(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_UPDATE') end
 	local message = channel._messages:get(d.id)
 	if message then
@@ -393,7 +344,7 @@ function EventHandler.MESSAGE_UPDATE(d, client) -- may not contain the whole mes
 end
 
 function EventHandler.MESSAGE_DELETE(d, client) -- message object not provided
-	local channel = getChannel(client, d)
+	local channel = client:getChannel(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_DELETE') end
 	if THREAD_TYPES[channel._type] then
 		channel._message_count = channel._message_count - 1
@@ -407,7 +358,7 @@ function EventHandler.MESSAGE_DELETE(d, client) -- message object not provided
 end
 
 function EventHandler.MESSAGE_DELETE_BULK(d, client)
-	local channel = getChannel(client, d)
+	local channel = client:getChannel(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_DELETE_BULK') end
 	if THREAD_TYPES[channel._type] then
 		channel._message_count = channel._message_count - #d.ids
@@ -423,7 +374,7 @@ function EventHandler.MESSAGE_DELETE_BULK(d, client)
 end
 
 function EventHandler.MESSAGE_REACTION_ADD(d, client)
-	local channel = getChannel(client, d)
+	local channel = client:getChannel(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_REACTION_ADD') end
 	local k = d.emoji.id ~= null and d.emoji.id or d.emoji.name
 	client:emit('reactionAddAny', channel, d.message_id, k, d.user_id)
@@ -437,7 +388,7 @@ function EventHandler.MESSAGE_REACTION_ADD(d, client)
 end
 
 function EventHandler.MESSAGE_REACTION_REMOVE(d, client)
-	local channel = getChannel(client, d)
+	local channel = client:getChannel(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_REACTION_REMOVE') end
 	local k = d.emoji.id ~= null and d.emoji.id or d.emoji.name
 	client:emit('reactionRemoveAny', channel, d.message_id, k, d.user_id)
@@ -455,7 +406,7 @@ function EventHandler.MESSAGE_REACTION_REMOVE(d, client)
 end
 
 function EventHandler.MESSAGE_REACTION_REMOVE_ALL(d, client)
-	local channel = getChannel(client, d)
+	local channel = client:getChannel(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_REACTION_REMOVE_ALL') end
 	client:emit('reactionRemoveAllAny', channel, d.message_id)
 	local message = channel._messages:get(d.message_id)
@@ -474,7 +425,7 @@ function EventHandler.MESSAGE_REACTION_REMOVE_ALL(d, client)
 end
 
 function EventHandler.CHANNEL_PINS_UPDATE(d, client)
-	local channel = getChannel(client, d)
+	local channel = client:getChannel(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'CHANNEL_PINS_UPDATE') end
 	return client:emit('pinsUpdate', channel)
 end
@@ -485,7 +436,7 @@ function EventHandler.PRESENCE_UPDATE(d, client) -- may have incomplete data
 		user:_load(d.user)
 	end
 	if d.guild_id then
-		local guild = client._guilds:get(d.guild_id)
+		local guild = client:getGuild(d.guild_id)
 		if not guild then return warning(client, 'Guild', d.guild_id, 'PRESENCE_UPDATE') end
 		local member
 		if client._options.cacheAllMembers then
@@ -533,7 +484,7 @@ local function load(obj, d)
 end
 
 function EventHandler.VOICE_STATE_UPDATE(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_STATE_UPDATE') end
 	local member = d.member and guild._members:_insert(d.member) or guild._members:get(d.user_id)
 	if not member then return warning(client, 'Member', d.user_id, 'VOICE_STATE_UPDATE') end
@@ -577,7 +528,7 @@ function EventHandler.VOICE_STATE_UPDATE(d, client)
 end
 
 function EventHandler.VOICE_SERVER_UPDATE(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'VOICE_SERVER_UPDATE') end
 	local state = guild._voice_states[client._user._id]
 	if not state then return client:warning('Voice state not initialized before VOICE_SERVER_UPDATE') end
@@ -590,7 +541,7 @@ function EventHandler.VOICE_SERVER_UPDATE(d, client)
 end
 
 function EventHandler.WEBHOOKS_UPDATE(d, client) -- webhook object is not provided
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'WEBHOOKS_UDPATE') end
 	local channel = guild._text_channels:get(d.channel_id)
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'WEBHOOKS_UPDATE') end
@@ -642,7 +593,7 @@ local function clearStaleThreads(threads)
 end
 
 function EventHandler.THREAD_LIST_SYNC(d, client)
-	local guild = client._guilds:get(d.guild_id)
+	local guild = client:getGuild(d.guild_id)
 	if not guild then return warning(client, 'Guild', d.guild_id, 'THREAD_LIST_SYNC') end
 	local synchedThreads = {}
 	-- remove archived threads from cache to save space
@@ -701,7 +652,11 @@ function EventHandler.THREAD_MEMBERS_UPDATE(d, client)
 	return client:emit('threadMembersUpdate', thread)
 end
 
-function EventHandler.GUILD_STICKERS_UPDATE(d, client)
+function EventHandler.GUILD_EMOJIS_UPDATE(d, client)
+	local guild = client:getGuild(d.guild_id)
+	if not guild then return warning(client, 'Guild', d.guild_id, 'GUILD_EMOJIS_UPDATE') end
+	guild._emojis:_load(d.emojis)
+	return client:emit('emojisUpdate', guild, d.emojis)
 end
 
 function EventHandler.GUILD_SCHEDULED_EVENT_CREATE(d, client)
@@ -726,6 +681,9 @@ function EventHandler.STAGE_INSTANCE_UPDATE(d, client)
 end
 
 function EventHandler.STAGE_INSTANCE_DELETE(d, client)
+end
+
+function EventHandler.VOICE_CHANNEL_START_TIME_UPDATE(d, client)
 end
 
 function EventHandler.VOICE_CHANNEL_STATUS_UPDATE(d, client)

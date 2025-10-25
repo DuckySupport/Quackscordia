@@ -268,7 +268,7 @@ function API:getGuildAuditLog(guild_id, query)
     return self:request("GET", endpoint, nil, query)
 end
 
-function API:getChannel(channel_id) -- not exposed, use cache
+function API:getChannel(channel_id)
     local endpoint = f(endpoints.CHANNEL, channel_id)
     return self:request("GET", endpoint)
 end
@@ -407,15 +407,9 @@ function API:groupDMRemoveRecipient(channel_id, user_id) -- GroupChannel:removeR
     return self:request("DELETE", endpoint)
 end
 
-function API:listGuildEmojis(guild_id) -- not exposed, use cache
-    local endpoint = f(endpoints.GUILD_EMOJIS, guild_id)
-    return self:request("GET", endpoint)
-end
 
-function API:getGuildEmoji(guild_id, emoji_id) -- not exposed, use cache
-    local endpoint = f(endpoints.GUILD_EMOJI, guild_id, emoji_id)
-    return self:request("GET", endpoint)
-end
+
+
 
 function API:createGuildEmoji(guild_id, payload) -- Guild:createEmoji
     local endpoint = f(endpoints.GUILD_EMOJIS, guild_id)
@@ -462,7 +456,7 @@ function API:createGuild(payload) -- Client:createGuild
     return self:request("POST", endpoint, payload)
 end
 
-function API:getGuild(guild_id) -- not exposed, use cache
+function API:getGuild(guild_id)
     local endpoint = f(endpoints.GUILD, guild_id)
     return self:request("GET", endpoint)
 end
@@ -477,10 +471,7 @@ function API:deleteGuild(guild_id) -- Guild:delete
     return self:request("DELETE", endpoint)
 end
 
-function API:getGuildChannels(guild_id) -- not exposed, use cache
-    local endpoint = f(endpoints.GUILD_CHANNELS, guild_id)
-    return self:request("GET", endpoint)
-end
+
 
 function API:createGuildChannel(guild_id, payload) -- Guild:create[Text|Voice]Channel
     local endpoint = f(endpoints.GUILD_CHANNELS, guild_id)
@@ -552,7 +543,7 @@ function API:removeGuildBan(guild_id, user_id, query) -- Guild:unbanUser / Ban:d
     return self:request("DELETE", endpoint, nil, query)
 end
 
-function API:getGuildRoles(guild_id) -- not exposed, use cache
+function API:getGuildRoles(guild_id)
     local endpoint = f(endpoints.GUILD_ROLES, guild_id)
     return self:request("GET", endpoint)
 end
