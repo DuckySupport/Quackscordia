@@ -127,9 +127,6 @@ function Guild:fetch()
 	local data, err = self.client._api:getGuild(self._id)
 	if data then
 		self:_load(data)
-		self.client._active_guilds:_insert(self)
-		self.client:_touchActiveGuild(self._id)
-		self.client:_evictActiveGuild()
 		return self
 	else
 		return nil, err
