@@ -77,8 +77,7 @@ local defaultOptions = {
 	dateTime = '%F %T',
 	syncGuilds = false,
 	gatewayIntents = 3243773, -- all non-privileged intents
-	suppressUnhandledGatewayEvents = false,
-	activeGuildsLimit = 100
+	suppressUnhandledGatewayEvents = false
 }
 
 local function parseOptions(customOptions)
@@ -120,9 +119,6 @@ function Client:__init(options)
 	self._users = WeakCache({}, User, self)
 	self._guilds = WeakCache({}, Guild, self)
 	self._guild_ids = {}
-	self._active_guilds = Cache({}, Guild, self)
-	self._active_guilds_order = {}
-	self._active_guilds_limit = options.activeGuildsLimit
 	self._group_channels = WeakCache({}, GroupChannel, self)
 	self._private_channels = WeakCache({}, PrivateChannel, self)
 	self._relationships = Cache({}, Relationship, self)
@@ -131,27 +127,6 @@ function Client:__init(options)
 	self._voice = VoiceManager(self)
 	self._events = require('client/EventHandler')
 	self._intents = options.gatewayIntents
-end
-
-function Client:_touchActiveGuild(guild_id)
-	local order = self._active_guilds_order
-	for i = 1, #order do
-		if order[i] == guild_id then
-			table.remove(order, i)
-			break
-		end
-	end
-	table.insert(order, 1, guild_id)
-end
-
-function Client:_evictActiveGuild()
-	local order = self._active_guilds_order
-	local active_guilds = self._active_guilds
-
-	if #order > self._active_guilds_limit then
-		local lru_guild_id = table.remove(order)
-		active_guilds:_delete(lru_guild_id)
-	end
 end
 
 for name, level in pairs(logLevel) do
@@ -597,29 +572,16 @@ object will be returned; otherwise, an HTTP request is made.
 ]=]
 function Client:getGuild(id)
 	id = Resolver.guildId(id)
-
-	local guild = self._active_guilds:get(id)
+	local guild = self._guilds:get(id)
 	if guild then
-		self:_touchActiveGuild(id)
-		return guild
-	end
-
-	guild = self._guilds:get(id)
-	if guild then
-		self._active_guilds:_insert(guild)
-		self:_touchActiveGuild(id)
-		self:_evictActiveGuild()
-		return guild
-	end
-
-	local data, err = self._api:getGuild(id)
-	if data then
-		guild = self._active_guilds:_insert(data)
-		self:_touchActiveGuild(id)
-		self:_evictActiveGuild()
 		return guild
 	else
-		return nil, err
+		local data, err = self._api:getGuild(id)
+		if data then
+			return self._guilds:_insert(data)
+		else
+			return nil, err
+		end
 	end
 end
 

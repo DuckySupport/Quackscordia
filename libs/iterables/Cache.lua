@@ -65,10 +65,7 @@ local function remove(self, k, obj)
 end
 
 function Cache:_insert(data, parent)
-	local k, err = self._hash(data)
-	if not k then
-		return nil, err
-	end
+	local k = assert(self._hash(data))
 	local old = self._objects[k]
 	if old then
 		old:_load(data)
@@ -111,12 +108,8 @@ function Cache:_load(array, update)
 	if update then
 		local updated = {}
 		for _, data in ipairs(array) do
-			if type(data) == 'table' then
-				local obj = self:_insert(data)
-				if obj then
-					updated[obj:__hash()] = true
-				end
-			end
+			local obj = self:_insert(data)
+			updated[obj:__hash()] = true
 		end
 		for obj in self:iter() do
 			local k = obj:__hash()
@@ -126,9 +119,7 @@ function Cache:_load(array, update)
 		end
 	else
 		for _, data in ipairs(array) do
-			if type(data) == 'table' then
-				self:_insert(data)
-			end
+			self:_insert(data)
 		end
 	end
 end

@@ -44,13 +44,8 @@ function EventHandler.READY(d, client, shard)
 	end
 
 if d.user.bot then
-		for _, guild_data in ipairs(d.guilds) do
-			client._guild_ids[guild_data.id] = true
-			-- Insert into weak cache, then promote to active cache
-			local guild = guilds:_insert(guild_data)
-			client._active_guilds:_insert(guild)
-			client:_touchActiveGuild(guild_data.id)
-			client:_evictActiveGuild()
+		for _, guild in ipairs(d.guilds) do
+			client._guild_ids[guild.id] = true
 		end
 	else
 		if client._options.syncGuilds then
@@ -222,28 +217,13 @@ function EventHandler.GUILD_CREATE(d, client, shard)
 	else
 		guild = client._guilds:_insert(d)
 		client._guild_ids[d.id] = true
-		client._active_guilds:_insert(guild)
-		client:_touchActiveGuild(d.id)
-		client:_evictActiveGuild()
 		return client:emit('guildCreate', guild)
 	end
 	if d.channels then
-		local text_channels = guild._text_channels
-		local voice_channels = guild._voice_channels
-		local forum_channels = guild._forum_channels
-		local categories = guild._categories
-		for _, channel in ipairs(d.channels) do
-			local t = channel.type
-			if t == channelType.text or t == channelType.news then
-				text_channels:_insert(channel)
-			elseif t == channelType.voice then
-				voice_channels:_insert(channel)
-			elseif t == channelType.forum then
-				forum_channels:_insert(channel)
-			elseif t == channelType.category then
-				categories:_insert(channel)
-			end
-		end
+		guild._text_channels:_load(d.channels)
+		guild._voice_channels:_load(d.channels)
+		guild._forum_channels:_load(d.channels)
+		guild._categories:_load(d.channels)
 		client:emit('channelsUpdate', guild, d.channels)
 	end
 end
@@ -251,22 +231,10 @@ end
 function EventHandler.GUILD_UPDATE(d, client)
 	local guild = client._guilds:_insert(d)
 	if d.channels then
-		local text_channels = guild._text_channels
-		local voice_channels = guild._voice_channels
-		local forum_channels = guild._forum_channels
-		local categories = guild._categories
-		for _, channel in ipairs(d.channels) do
-			local t = channel.type
-			if t == channelType.text or t == channelType.news then
-				text_channels:_insert(channel)
-			elseif t == channelType.voice then
-				voice_channels:_insert(channel)
-			elseif t == channelType.forum then
-				forum_channels:_insert(channel)
-			elseif t == channelType.category then
-				categories:_insert(channel)
-			end
-		end
+		guild._text_channels:_load(d.channels)
+		guild._voice_channels:_load(d.channels)
+		guild._forum_channels:_load(d.channels)
+		guild._categories:_load(d.channels)
 		client:emit('channelsUpdate', guild, d.channels)
 	end
 	return client:emit('guildUpdate', guild)
@@ -279,14 +247,6 @@ function EventHandler.GUILD_DELETE(d, client)
 	else
 		local guild = client._guilds:_remove(d)
 		client._guild_ids[d.id] = nil
-		client._active_guilds:_delete(d.id)
-		local order = client._active_guilds_order
-		for i = 1, #order do
-			if order[i] == d.id then
-				table.remove(order, i)
-				break
-			end
-		end
 		return client:emit('guildDelete', guild)
 	end
 end
