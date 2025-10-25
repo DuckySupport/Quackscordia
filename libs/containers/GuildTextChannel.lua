@@ -16,8 +16,8 @@ local Resolver = require('client/Resolver')
 local GuildTextChannel, get = require('class')('GuildTextChannel', GuildChannel, TextChannel)
 
 function GuildTextChannel:__init(data, parent)
-	TextChannel.__init(self, data, parent)
 	GuildChannel.__init(self, data, parent)
+	TextChannel.__init(self, data, parent)
 end
 
 function GuildTextChannel:_load(data)

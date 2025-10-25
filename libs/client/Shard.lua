@@ -218,6 +218,7 @@ function Shard:identify()
 	self._seq = nil
 	self._session_id = nil
 	self._ready = false
+	self._loading = {guilds = {}, chunks = {}, syncs = {}}
 
 	return self:_send(IDENTIFY, {
 		token = client._token,

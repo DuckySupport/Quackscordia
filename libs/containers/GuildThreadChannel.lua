@@ -34,6 +34,7 @@ end
 
 function GuildThreadChannel:__init(data, parent)
 	TextChannel.__init(self, data, parent)
+	self.client._channel_map[self._id] = parent._parent
 	self._members = Cache({}, ThreadMember, self)
 	self._members._hash = threadMemberHash -- default to user_id instead of id
 	self._thread_metadata = {}

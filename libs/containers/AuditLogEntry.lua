@@ -53,31 +53,31 @@ local targets = setmetatable({
 	end,
 
 	[actionType.channelCreate] = function(self)
-		return self.client:getChannel(self._target_id)
+		return self._parent:getChannel(self._target_id)
 	end,
 
 	[actionType.channelUpdate] = function(self)
-		return self.client:getChannel(self._target_id)
+		return self._parent:getChannel(self._target_id)
 	end,
 
 	[actionType.channelDelete] = function(self)
-		return self.client:getChannel(self._target_id)
+		return self._parent:getChannel(self._target_id)
 	end,
 
 	[actionType.channelOverwriteCreate] = function(self)
-		return self.client:getChannel(self._target_id)
+		return self._parent:getChannel(self._target_id)
 	end,
 
 	[actionType.channelOverwriteUpdate] = function(self)
-		return self.client:getChannel(self._target_id)
+		return self._parent:getChannel(self._target_id)
 	end,
 
 	[actionType.channelOverwriteDelete] = function(self)
-		return self.client:getChannel(self._target_id)
+		return self._parent:getChannel(self._target_id)
 	end,
 
 	[actionType.memberKick] = function(self)
-		return self.client:getUser(self._target_id)
+		return self._parent._parent:getUser(self._target_id)
 	end,
 
 	[actionType.memberPrune] = function()
@@ -85,11 +85,11 @@ local targets = setmetatable({
 	end,
 
 	[actionType.memberBanAdd] = function(self)
-		return self.client:getUser(self._target_id)
+		return self._parent._parent:getUser(self._target_id)
 	end,
 
 	[actionType.memberBanRemove] = function(self)
-		return self.client:getUser(self._target_id)
+		return self._parent._parent:getUser(self._target_id)
 	end,
 
 	[actionType.memberUpdate] = function(self)
@@ -101,15 +101,15 @@ local targets = setmetatable({
 	end,
 
 	[actionType.roleCreate] = function(self)
-		return self.client:getRole(self._target_id)
+		return self._parent:getRole(self._target_id)
 	end,
 
 	[actionType.roleUpdate] = function(self)
-		return self.client:getRole(self._target_id)
+		return self._parent:getRole(self._target_id)
 	end,
 
 	[actionType.roleDelete] = function(self)
-		return self.client:getRole(self._target_id)
+		return self._parent:getRole(self._target_id)
 	end,
 
 	[actionType.inviteCreate] = function()
@@ -125,31 +125,31 @@ local targets = setmetatable({
 	end,
 
 	[actionType.webhookCreate] = function(self)
-		return self.client._webhooks:get(self._target_id)
+		return self._parent._parent._webhooks:get(self._target_id)
 	end,
 
 	[actionType.webhookUpdate] = function(self)
-		return self.client._webhooks:get(self._target_id)
+		return self._parent._parent._webhooks:get(self._target_id)
 	end,
 
 	[actionType.webhookDelete] = function(self)
-		return self.client._webhooks:get(self._target_id)
+		return self._parent._parent._webhooks:get(self._target_id)
 	end,
 
 	[actionType.emojiCreate] = function(self)
-		return self.client:getEmoji(self._target_id)
+		return self._parent:getEmoji(self._target_id)
 	end,
 
 	[actionType.emojiUpdate] = function(self)
-		return self.client:getEmoji(self._target_id)
+		return self._parent:getEmoji(self._target_id)
 	end,
 
 	[actionType.emojiDelete] = function(self)
-		return self.client:getEmoji(self._target_id)
+		return self._parent:getEmoji(self._target_id)
 	end,
 
 	[actionType.messageDelete] = function(self)
-		return self.client:getUser(self._target_id)
+		return self._parent._parent:getUser(self._target_id)
 	end,
 
 }, {__index = function() return unknown	end})
@@ -172,7 +172,7 @@ end
 @d Gets the user who performed the changes.
 ]=]
 function AuditLogEntry:getUser()
-	return self.client:getUser(self._user_id)
+	return self._parent._parent:getUser(self._user_id)
 end
 
 --[=[
