@@ -174,52 +174,45 @@ function Member:hasPermission(channel, perm)
 		return true
 	end
 
-	if channel then
-
-		local raw = self.parent.parent._api:getChannelPermissionOverwrites(channel.id)
-		local overwrites = raw and wrapOverwrites(channel, raw)
-		local overwrite = overwrites and overwrites:get(self.id)
-
-		if overwrite then
-			if overwrite:getAllowedPermissions():has(n) then
-				return true
-			end
-			if overwrite:getDeniedPermissions():has(n) then
-				return false
-			end
-		end
-
-		local allow, deny = Permissions(), Permissions()
-		for role in self.roles:iter() do
-			if role.id ~= guild.id then -- just in case
-				overwrite = overwrites:get(role.id)
-				if overwrite then
-					allow = allow:union(overwrite:getAllowedPermissions())
-					deny = deny:union(overwrite:getDeniedPermissions())
-				end
-			end
-		end
-
-		if allow:has(n) then
-			return true
-		end
-		if deny:has(n) then
-			return false
-		end
-
-		local everyone = overwrites and overwrites:get(guild.id)
-		if everyone then
-			if everyone:getAllowedPermissions():has(n) then
-				return true
-			end
-			if everyone:getDeniedPermissions():has(n) then
-				return false
-			end
-		end
-
+	if not channel then
+		return rolePermissions:has(n)
 	end
 
-	return rolePermissions:has(n)
+	local p = rolePermissions
+	local raw = self.parent.parent._api:getChannelPermissionOverwrites(channel.id)
+	local overwrites = raw and wrapOverwrites(channel, raw)
+
+	if not overwrites then
+		return p:has(n)
+	end
+
+	local everyone = overwrites:get(guild.id)
+	if everyone then
+		p = everyone:getDeniedPermissions():complement(p)
+		p = p:union(everyone:getAllowedPermissions())
+	end
+
+	local allow, deny = Permissions(), Permissions()
+	for role in self.roles:iter() do
+		if role.id ~= guild.id then
+			local overwrite = overwrites:get(role.id)
+			if overwrite then
+				deny = deny:union(overwrite:getDeniedPermissions())
+				allow = allow:union(overwrite:getAllowedPermissions())
+			end
+		end
+	end
+
+	p = deny:complement(p)
+	p = p:union(allow)
+	local overwrite = overwrites:get(self.id)
+
+	if overwrite then
+		p = overwrite:getDeniedPermissions():complement(p)
+		p = p:union(overwrite:getAllowedPermissions())
+	end
+
+	return p:has(n)
 
 end
 
