@@ -118,6 +118,7 @@ function Client:__init(options)
 	self._mutex = Mutex()
 	self._users = WeakCache({}, User, self)
 	self._guilds = WeakCache({}, Guild, self)
+	self._guild_ids = {}
 	self._group_channels = WeakCache({}, GroupChannel, self)
 	self._private_channels = WeakCache({}, PrivateChannel, self)
 	self._relationships = Cache({}, Relationship, self)
@@ -605,7 +606,7 @@ function Client:getChannel(id)
 
     -- 2. Check all cached guilds for the channel
     for guild in self._guilds:iter() do
-        channel = guild:getChannel(id)
+        channel = guild._text_channels:get(id) or guild._voice_channels:get(id) or guild._forum_channels:get(id) or guild._thread_channels:get(id) or guild._categories:get(id)
         if channel then
             return channel
         end
@@ -790,6 +791,15 @@ end
 --[=[@p totalShardCount number/nil The total number of shards that the current user is on.]=]
 function get.totalShardCount(self)
 	return self._total_shard_count
+end
+
+--[=[@p guildCount number The total number of guilds that the client is in.]=]
+function get.guildCount(self)
+	local count = 0
+	for _ in pairs(self._guild_ids) do
+		count = count + 1
+	end
+	return count
 end
 
 --[=[@p user User/nil User object representing the current user.]=]
