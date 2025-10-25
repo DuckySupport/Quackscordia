@@ -157,6 +157,7 @@ function Member:hasPermission(channel, perm)
 		return true
 	end
 
+	if not guild.defaultRole then return false end
 	local rolePermissions = guild.defaultRole:getPermissions()
 
 	for role in self.roles:iter() do
@@ -240,6 +241,7 @@ function Member:getPermissions(channel)
 		return Permissions.all()
 	end
 
+	if not guild.defaultRole then return Permissions() end
 	local ret = guild.defaultRole:getPermissions()
 
 	for role in self.roles:iter() do
