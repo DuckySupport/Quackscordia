@@ -281,6 +281,16 @@ function table.after(tbl, after)
     return ret
 end
 
+function table.merge(from, to)
+	from = from or {}
+	to = to or {}
+
+	for _, v in pairs(from) do
+		insert(to, v)
+	end
+	return to
+end
+
 local string = {}
 
 function string.split(str, delim)
