@@ -282,13 +282,16 @@ function table.after(tbl, after)
 end
 
 function table.merge(from, to)
-	from = from or {}
-	to = to or {}
+	local ret = {}
 
 	for _, v in pairs(from) do
-		insert(to, v)
+		insert(ret, v)
 	end
-	return to
+	for _, v in pairs(to) do
+		insert(ret, v)
+	end
+	
+	return ret
 end
 
 local string = {}
