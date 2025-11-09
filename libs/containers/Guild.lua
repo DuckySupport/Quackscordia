@@ -32,6 +32,7 @@ local Guild, get = require('class')('Guild', Snowflake)
 function Guild:__init(data, parent)
 	Snowflake.__init(self, data, parent)
 	self._roles = Cache({}, Role, self)
+	self._emojis = Cache({}, Emoji, self)
 	self._members = Cache({}, Member, self)
 	self._text_channels = Cache({}, GuildTextChannel, self)
 	self._voice_channels = Cache({}, GuildVoiceChannel, self)
@@ -39,7 +40,7 @@ function Guild:__init(data, parent)
 	self._thread_channels = Cache({}, GuildThreadChannel)
 	self._categories = Cache({}, GuildCategoryChannel, self)
 	self._voice_states = {}
-	if not data.unavailable then
+	if not data.unavailable and data.roles then
 		return self:_makeAvailable(data)
 	end
 end
@@ -58,6 +59,7 @@ end
 function Guild:_makeAvailable(data)
 
 	self._roles:_load(data.roles)
+	self._emojis:_load(data.emojis)
 	self:_loadMore(data)
 
 	if not data.channels then return end -- incomplete guild
@@ -85,8 +87,6 @@ function Guild:_makeAvailable(data)
 		end
 	end
 
-	self:_loadThreads(data)
-
 	return self:_loadMembers(data)
 
 end
@@ -105,16 +105,7 @@ function Guild:_loadMembers(data)
 	end
 end
 
-function Guild:_loadThreads(data)
-	if data.threads then
-		for _, thread in ipairs(data.threads) do
-			local parent = self:getChannel(thread.parent_id)
-			if parent then
-				parent._thread_channels:_insert(thread, parent)
-			end
-		end
-	end
-end
+
 
 function Guild:_modify(payload)
 	local data, err = self.client._api:modifyGuild(self._id, payload)
@@ -123,6 +114,25 @@ function Guild:_modify(payload)
 		return true
 	else
 		return false, err
+	end
+end
+
+--[=[
+@m fetch
+@t http
+@r Guild
+@d Fetches the full guild data from the API and updates the guild object's properties.
+]=]
+function Guild:fetch()
+	local data, err = self.client._api:getGuild(self._id)
+	if data then
+		self:_load(data)
+		self.client._active_guilds:_insert(self)
+		self.client:_touchActiveGuild(self._id)
+		self.client:_evictActiveGuild()
+		return self
+	else
+		return nil, err
 	end
 end
 
@@ -138,9 +148,6 @@ function Guild:requestMembers()
 	local shard = self.client._shards[self.shardId]
 	if not shard then
 		return false, 'Invalid shard'
-	end
-	if shard._loading then
-		shard._loading.chunks[self._id] = true
 	end
 	return shard:requestGuildMembers(self._id)
 end
@@ -159,9 +166,6 @@ function Guild:sync()
 	local shard = self.client._shards[self.shardId]
 	if not shard then
 		return false, 'Invalid shard'
-	end
-	if shard._loading then
-		shard._loading.syncs[self._id] = true
 	end
 	return shard:syncGuilds({self._id})
 end
@@ -189,34 +193,13 @@ function Guild:getMember(id)
 	end
 end
 
---[=[
-@m getRole
-@t mem
-@p id Role-ID-Resolvable
-@r Role
-@d Gets a role object by ID.
-]=]
-function Guild:getRole(id)
-	id = Resolver.roleId(id)
-	return self._roles:get(id)
-end
 
---[=[
-@m getEmoji
-@t mem
-@p id Emoji-ID-Resolvable
-@r Emoji
-@d Gets a emoji object by ID.
-]=]
-function Guild:getEmoji(id)
-	id = Resolver.emojiId(id)
-	local data, err = self.client._api:getGuildEmoji(self._id, id)
-	if data then
-		return Emoji(data, self)
-	else
-		return nil, err
-	end
-end
+
+
+
+
+
+
 
 --[=[
 @m getChannel
@@ -227,12 +210,13 @@ end
 ]=]
 function Guild:getChannel(id)
 	id = Resolver.channelId(id)
-	return self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id)
-end
-
-function Guild:getCategory(id)
-	id = Resolver.channelId(id)
-	return self._categories:get(id)
+	local channel = self._text_channels:get(id) or self._voice_channels:get(id) or self._forum_channels:get(id) or self._thread_channels:get(id) or self._categories:get(id)
+	if channel then
+		return channel
+	else
+		-- Fallback to client's getChannel, which can fetch from API
+		return self.client:getChannel(id)
+	end
 end
 
 --[=[
@@ -945,6 +929,11 @@ end
 --[=[@p connection VoiceConnection/nil The VoiceConnection for this guild if one exists.]=]
 function get.connection(self)
 	return self._connection
+end
+
+--[=[@p emojis Cache An iterable cache of all emojis that exist in this guild.]=]
+function get.emojis(self)
+	return self._emojis
 end
 
 --[=[@p roles Cache An iterable cache of all roles that exist in this guild. This includes the

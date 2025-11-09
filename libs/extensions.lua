@@ -281,19 +281,6 @@ function table.after(tbl, after)
     return ret
 end
 
-function table.merge(from, to)
-	local ret = {}
-
-	for _, v in pairs(from) do
-		insert(ret, v)
-	end
-	for _, v in pairs(to) do
-		insert(ret, v)
-	end
-	
-	return ret
-end
-
 local string = {}
 
 function string.split(str, delim)

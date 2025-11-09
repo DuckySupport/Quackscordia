@@ -28,6 +28,11 @@ local User = require('containers/User')
 local Invite = require('containers/Invite')
 local Webhook = require('containers/Webhook')
 local Relationship = require('containers/Relationship')
+local GuildTextChannel = require('containers/GuildTextChannel')
+local GuildVoiceChannel = require('containers/GuildVoiceChannel')
+local GuildCategoryChannel = require('containers/GuildCategoryChannel')
+local GuildForumChannel = require('containers/GuildForumChannel')
+local GuildThreadChannel = require('containers/GuildThreadChannel')
 
 local Cache = require('iterables/Cache')
 local WeakCache = require('iterables/WeakCache')
@@ -43,6 +48,7 @@ local band, bor, bnot = bit.band, bit.bor, bit.bnot
 
 local logLevel = assert(enums.logLevel)
 local activityType = assert(enums.activityType)
+local channelType = assert(enums.channelType)
 local gatewayIntent = assert(enums.gatewayIntent)
 
 local wrap = coroutine.wrap
@@ -71,7 +77,8 @@ local defaultOptions = {
 	dateTime = '%F %T',
 	syncGuilds = false,
 	gatewayIntents = 3243773, -- all non-privileged intents
-	suppressUnhandledGatewayEvents = false
+	suppressUnhandledGatewayEvents = false,
+	activeGuildsLimit = 100
 }
 
 local function parseOptions(customOptions)
@@ -110,18 +117,41 @@ function Client:__init(options)
 	self._shards = {}
 	self._api = API(self)
 	self._mutex = Mutex()
-	self._users = Cache({}, User, self)
-	self._guilds = Cache({}, Guild, self)
-	self._group_channels = Cache({}, GroupChannel, self)
-	self._private_channels = Cache({}, PrivateChannel, self)
+	self._users = WeakCache({}, User, self)
+	self._guilds = WeakCache({}, Guild, self)
+	self._guild_ids = {}
+	self._active_guilds = Cache({}, Guild, self)
+	self._active_guilds_order = {}
+	self._active_guilds_limit = options.activeGuildsLimit
+	self._group_channels = WeakCache({}, GroupChannel, self)
+	self._private_channels = WeakCache({}, PrivateChannel, self)
 	self._relationships = Cache({}, Relationship, self)
 	self._webhooks = WeakCache({}, Webhook, self) -- used for audit logs
 	self._logger = Logger(options.logLevel, options.dateTime, options.logFile)
 	self._voice = VoiceManager(self)
-	self._role_map = {}
-	self._channel_map = {}
 	self._events = require('client/EventHandler')
 	self._intents = options.gatewayIntents
+end
+
+function Client:_touchActiveGuild(guild_id)
+	local order = self._active_guilds_order
+	for i = 1, #order do
+		if order[i] == guild_id then
+			table.remove(order, i)
+			break
+		end
+	end
+	table.insert(order, 1, guild_id)
+end
+
+function Client:_evictActiveGuild()
+	local order = self._active_guilds_order
+	local active_guilds = self._active_guilds
+
+	if #order > self._active_guilds_limit then
+		local lru_guild_id = table.remove(order)
+		active_guilds:_delete(lru_guild_id)
+	end
 end
 
 for name, level in pairs(logLevel) do
@@ -524,58 +554,147 @@ function Client:getUser(id)
 end
 
 --[=[
-@m getGuild
-@t mem
-@p id Guild-ID-Resolvable
-@r Guild
-@d Gets a guild object by ID. The current user must be in the guild and the client
-must be running the appropriate shard that serves this guild. This method never
-makes an HTTP request to obtain a guild.
-]=]
-function Client:getGuild(id)
-	id = Resolver.guildId(id)
-	return self._guilds:get(id)
-end
-
---[=[
-@m getChannel
-@t mem
-@p id Channel-ID-Resolvable
-@r Channel
-@d Gets a channel object by ID. For guild channels, the current user must be in
-the channel's guild and the client must be running the appropriate shard that
-serves the channel's guild.
-
-For private channels, the channel must have been previously opened and cached.
-If the channel is not cached, `User:getPrivateChannel` should be used instead.
-]=]
-function Client:getChannel(id)
-	id = Resolver.channelId(id)
-	local guild = self._channel_map[id]
-	if guild then
-		return guild._forum_channels:get(id)
-			or guild._text_channels:get(id)
-			or guild._voice_channels:get(id)
-			or guild._thread_channels:get(id)
-			or guild._categories:get(id)
-	else
-		return self._private_channels:get(id) or self._group_channels:get(id)
-	end
-end
-
---[=[
 @m getRole
 @t mem
 @p id Role-ID-Resolvable
 @r Role
-@d Gets a role object by ID. The current user must be in the role's guild and
-the client must be running the appropriate shard that serves the role's guild.
+@d Gets a role object by ID.
 ]=]
 function Client:getRole(id)
 	id = Resolver.roleId(id)
-	local guild = self._role_map[id]
-	return guild and guild._roles:get(id)
+	for guild in self._guilds:iter() do
+		local role = guild.roles:get(id)
+		if role then
+			return role
+		end
+	end
 end
+
+--[=[
+@m getEmoji
+@t mem
+@p id Emoji-ID-Resolvable
+@r Emoji
+@d Gets a emoji object by ID.
+]=]
+function Client:getEmoji(id)
+	id = Resolver.emojiId(id)
+	for guild in self._guilds:iter() do
+		local emoji = guild.emojis:get(id)
+		if emoji then
+			return emoji
+		end
+	end
+end
+
+--[=[
+@m getGuild
+@t http?
+@p id Guild-ID-Resolvable
+@r Guild
+@d Gets a guild object by ID. If the object is already cached, then the cached
+object will be returned; otherwise, an HTTP request is made.
+]=]
+function Client:getGuild(id)
+	id = Resolver.guildId(id)
+
+	local guild = self._active_guilds:get(id)
+	if guild then
+		self:_touchActiveGuild(id)
+		return guild
+	end
+
+	guild = self._guilds:get(id)
+	if guild then
+		self._active_guilds:_insert(guild)
+		self:_touchActiveGuild(id)
+		self:_evictActiveGuild()
+		return guild
+	end
+
+	local data, err = self._api:getGuild(id)
+	if data then
+		guild = self._active_guilds:_insert(data)
+		self:_touchActiveGuild(id)
+		self:_evictActiveGuild()
+		return guild
+	else
+		return nil, err
+	end
+end
+
+local THREAD_TYPES = require('constants').THREAD_TYPES
+
+--[=[
+@m getChannel
+@t http?
+@p id Channel-ID-Resolvable
+@r Channel
+@d Gets a channel object by ID. If the object is not in a cache, an HTTP
+request is made and a temporary object is returned.
+]=]
+function Client:getChannel(id)
+	id = Resolver.channelId(id)
+
+	-- 1. Check DM/Group caches
+	local channel = self._private_channels:get(id) or self._group_channels:get(id)
+	if channel then
+		return channel
+	end
+
+    -- 2. Check all cached guilds for the channel
+    for guild in self._guilds:iter() do
+        channel = guild._text_channels:get(id) or guild._voice_channels:get(id) or guild._forum_channels:get(id) or guild._thread_channels:get(id) or guild._categories:get(id)
+        if channel then
+            return channel
+        end
+    end
+
+	-- 3. Fetch from API and create temporary objects
+	local data, err = self._api:getChannel(id)
+	if data then
+		if data.guild_id then
+			-- It's a guild channel.
+			local temp_guild = Guild({id = data.guild_id}, self)
+			local constructor
+
+			local t = data.type
+			if t == channelType.text or t == channelType.news then
+				constructor = GuildTextChannel
+			elseif t == channelType.voice then
+				constructor = GuildVoiceChannel
+			elseif t == channelType.category then
+				constructor = GuildCategoryChannel
+			elseif t == channelType.forum then
+				constructor = GuildForumChannel
+			elseif THREAD_TYPES[t] then
+				local parent_channel = self:getChannel(data.parent_id)
+				if parent_channel then
+					return GuildThreadChannel(data, parent_channel)
+				else
+					return nil, "Could not resolve thread parent channel: " .. tostring(data.parent_id)
+				end
+			end
+
+			if constructor then
+				return constructor(data, temp_guild)
+			end
+
+		else
+			-- It is a group or private channel, but it was not cached.
+			if data.type == channelType.private then
+				return self._private_channels:_insert(data)
+			elseif data.type == channelType.group then
+				return self._group_channels:_insert(data)
+			end
+		end
+	end
+
+	-- If all else fails
+	return nil, err
+end
+
+
 
 --[=[
 @m listVoiceRegions
@@ -710,6 +829,15 @@ end
 --[=[@p totalShardCount number/nil The total number of shards that the current user is on.]=]
 function get.totalShardCount(self)
 	return self._total_shard_count
+end
+
+--[=[@p guildCount number The total number of guilds that the client is in.]=]
+function get.guildCount(self)
+	local count = 0
+	for _ in pairs(self._guild_ids) do
+		count = count + 1
+	end
+	return count
 end
 
 --[=[@p user User/nil User object representing the current user.]=]
