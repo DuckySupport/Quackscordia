@@ -701,11 +701,11 @@ end
 @d Bans a user/member from the guild with an optional reason. The `days` parameter
 is the number of days to consider when purging messages, up to 7.
 ]=]
-function Guild:banUser(id, reason, days)
+function Guild:banUser(id, reason, seconds)
 	local query = reason and {reason = reason}
-	if days then
+	if seconds then
 		query = query or {}
-		query['delete-message-days'] = days
+		query['delete_message_seconds'] = seconds
 	end
 	id = Resolver.userId(id)
 	local data, err = self.client._api:createGuildBan(self._id, id, query)
