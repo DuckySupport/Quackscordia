@@ -64,7 +64,7 @@ function table.copy(tbl)
 	return ret
 end
 
-function table.deepcopy(tbl, layer, seen)
+function table.deepcopy(tbl, layer, seen, ignore)
 	if not tbl then return {} end
 
 	layer = layer or 1
@@ -82,7 +82,11 @@ function table.deepcopy(tbl, layer, seen)
 	seen[tbl] = ret
 
     for k, v in pairs(tbl) do
-        ret[k] = (type(v) == 'table' and table.deepcopy(v, layer + 1, seen)) or (type(v) ~= 'table' and v)
+		if table.find(ignore or {}, k) then
+			ret[k] = nil
+		else
+			ret[k] = (type(v) == 'table' and table.deepcopy(v, layer + 1, seen)) or (type(v) ~= 'table' and v)
+		end
     end
 
     local mt = getmetatable(tbl)
