@@ -87,9 +87,7 @@ function table.deepcopy(tbl, layer, seen)
 
     local mt = getmetatable(tbl)
     if mt then
-		print("deepcopy: copying metatable...")
         local mtc = table.deepcopy(mt, layer + 1, seen)
-		print("deepcopy: copied metatable: " .. tostring(mtc))
 		if mtc then
 			setmetatable(ret, mtc)
 		end
