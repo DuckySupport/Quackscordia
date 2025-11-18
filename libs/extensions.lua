@@ -65,17 +65,15 @@ function table.copy(tbl)
 end
 
 function table.deepcopy(tbl, layer, seen)
-	if not tbl then print("deepcopy: no table provided, returning empty"); return {} end
+	if not tbl then return {} end
 
 	layer = layer or 1
 	if layer > 25 then
-		print("deepcopy: layer exceeds 25, returning nil")
 		return nil
 	end
 
 	seen = seen or {}
 	if seen[tbl] then
-		print("deepcopy: " .. tostring(tbl) .. " was already seen, returning cached")
 		return seen[tbl]
 	end
 
@@ -83,24 +81,13 @@ function table.deepcopy(tbl, layer, seen)
 	seen[tbl] = ret
 
     for k, v in pairs(tbl) do
-		print("deepcopy: iterating " .. tostring(k) .. ": " .. tostring(v))
-        ret[k] = (type(v) == 'table' and table.deepcopy(v, layer + 1, seen)) or (type(v) ~= 'table' and v)
-		print("deepcopy: set new copy's " .. tostring(k) .. " to " .. tostring(ret[k]))
+        ret[k] = type(v) == 'table' and table.deepcopy(v, layer + 1, seen) or v
     end
 
-	print("deepcopy: checking for metatable...")
     local mt = getmetatable(tbl)
     if mt then
-		print("deepcopy: metatable exists, copying...")
-        local mtc = table.deepcopy(mt, layer + 1, seen)
-		print("deepcopy: copied metatable: " .. tostring(mtc))
-		if mtc then
-			print("deepcopy: setting metatable...")
-			setmetatable(ret, mtc)
-			print("deepcopy: set metatable")
-		end
+        setmetatable(ret, table.deepcopy(mt, layer + 1, seen))
     end
-	print("deepcopy: returning: " .. tostring(ret))
     return ret
 end
 
