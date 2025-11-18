@@ -64,19 +64,29 @@ function table.copy(tbl)
 	return ret
 end
 
-function table.deepcopy(tbl, layer)
+function table.deepcopy(tbl, layer, seen)
 	if not tbl then return {} end
+
 	layer = layer or 1
 	if layer > 25 then
 		return nil
 	end
+
+	seen = seen or {}
+	if seen[tbl] then
+		return seen[tbl]
+	end
+
     local ret = {}
+	seen[tbl] = ret
+
     for k, v in pairs(tbl) do
-        ret[k] = type(v) == 'table' and table.deepcopy(v, layer + 1) or v
+        ret[k] = type(v) == 'table' and table.deepcopy(v, layer + 1, seen) or v
     end
+
     local mt = getmetatable(tbl)
     if mt then
-        setmetatable(ret, table.deepcopy(mt))
+        setmetatable(ret, table.deepcopy(mt, layer + 1, seen))
     end
     return ret
 end
