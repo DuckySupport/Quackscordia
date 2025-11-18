@@ -66,6 +66,7 @@ end
 
 function table.deepcopy(tbl, layer, seen)
 	if not tbl then return {} end
+	if getmetatable(tbl) then return json.null end --hardcode tables with a metatable to just return json.null :yesyes:
 
 	layer = layer or 1
 	if layer > 25 then
@@ -85,13 +86,6 @@ function table.deepcopy(tbl, layer, seen)
         ret[k] = (type(v) == 'table' and table.deepcopy(v, layer + 1, seen)) or (type(v) ~= 'table' and v)
     end
 
-    local mt = getmetatable(tbl)
-    if mt then
-        local mtc = table.deepcopy(mt, layer + 1, seen)
-		if mtc then
-			setmetatable(ret, mtc)
-		end
-    end
     return ret
 end
 
