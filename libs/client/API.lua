@@ -338,6 +338,7 @@ function API:deleteAllReactions(channel_id, message_id) -- Message:clearReaction
 end
 
 function API:editMessage(channel_id, message_id, payload, files) -- Message:_modify
+    p("API:editMessage", channel_id, message_id, payload)
     local endpoint = f(endpoints.CHANNEL_MESSAGE, channel_id, message_id)
     return self:request("PATCH", endpoint, payload, nil, files)
 end
