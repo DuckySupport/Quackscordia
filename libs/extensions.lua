@@ -68,6 +68,7 @@ function table.deepcopy(tbl, layer)
 	if not tbl then return {} end
 	layer = layer or 1
 	if layer > 25 then
+		print("deepcopy: maximum depth reached (layer " .. tostring(layer) .. ")")
 		return nil
 	end
     local ret = {}
