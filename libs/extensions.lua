@@ -64,7 +64,7 @@ function table.copy(tbl)
 	return ret
 end
 
-function table.deepcopy(tbl, layer)
+function table.deepcopy(tbl, layer, blacklist)
 	if not tbl then return {} end
 	layer = layer or 1
 	if layer > 25 then
@@ -73,7 +73,9 @@ function table.deepcopy(tbl, layer)
 	end
     local ret = {}
     for k, v in pairs(tbl) do
-        ret[k] = type(v) == 'table' and table.deepcopy(v, layer + 1) or v
+		if not table.find(blacklist or {}, k) then
+			ret[k] = type(v) == 'table' and table.deepcopy(v, layer + 1, blacklist) or v
+		end
     end
     local mt = getmetatable(tbl)
     if mt then
