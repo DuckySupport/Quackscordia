@@ -76,7 +76,7 @@ function table.deepcopy(tbl, layer)
     end
     local mt = getmetatable(tbl)
     if mt then
-        setmetatable(ret, table.deepcopy(mt))
+        setmetatable(ret, mt)
     end
     return ret
 end
