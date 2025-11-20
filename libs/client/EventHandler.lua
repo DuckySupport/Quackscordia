@@ -27,18 +27,13 @@ local function checkReady(shard)
 end
 
 local function getChannel(client, d)
-	print("> client:getChannel")
 	local channel = client:getChannel(d.channel_id)
-	print("> done")
 	if channel and channel._messages then
 		return channel
 	end
 
-	print("> _api:getChannel")
 	local data = client._api:getChannel(d.channel_id)
-	print("> done")
 	if data then
-		print("> data", tostring(data.type))
 		if data.type == channelType.private then
 			channel = client._private_channels:_insert(data)
 		elseif data.type == channelType.group then
@@ -49,9 +44,7 @@ local function getChannel(client, d)
 				channel = parent_channel._thread_channels:_insert(data, parent_channel)
 			end
 		end
-		print("> processed data")
 	end
-	print("> returning ", tostring(channel and channel._messages and channel))
 	return channel and channel._messages and channel
 end
 
@@ -350,28 +343,18 @@ function EventHandler.GUILD_ROLE_DELETE(d, client) -- role object not provided
 end
 
 function EventHandler.MESSAGE_CREATE(d, client)
-	print("> EventHandler.MESSAGE_CREATE", tostring(d), tostring(client))
 	local channel = getChannel(client, d)
-	print("> fetched channel", tostring(channel))
 	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_CREATE') end
-	print("> checking thread")
 	if THREAD_TYPES[channel._type] then
-		print("> thread", tostring(channel._type))
 		channel._message_count = channel._message_count + 1
 		channel._total_message_sent = channel._total_message_sent + 1
 	end
 
-	print("> splitting")
     local split = string.split(d.content or "", " && ")
-	print("> iterating")
     for i, content in pairs(split) do
-		print("> iterate", tostring(i), tostring(content))
         d.content = content
-		print("> inserting new")
 		local new = channel._messages:_insert(d)
-		print("> emitting new", tostring(new))
         client:emit('messageCreate', new)
-		print("> emitted new")
 
         if i >= 3 then
             break
