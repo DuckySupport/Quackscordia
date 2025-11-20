@@ -65,6 +65,8 @@ function table.copy(tbl)
 end
 
 function table.deepcopy(tbl, layer, blacklist)
+	local co, main = coroutine.running()
+	if main then print("WARNING: deepcopy called from main thread") end
 	if not tbl then return {} end
 	layer = layer or 1
 	if layer > 25 then
