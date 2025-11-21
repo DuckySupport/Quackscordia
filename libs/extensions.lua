@@ -79,7 +79,6 @@ function table.deepcopy(tbl, layer, blacklist, path)
 				print("deepcopy: subdeepcopying " .. path .. "/" .. tostring(k) .. " (layer " .. tostring(layer) .. ")")
 				ret[k] = table.deepcopy(v, layer + 1, blacklist, path .. "/" .. tostring(k))
 			else
-				print("deepcopy: copying original value at " .. path .. "/" .. tostring(k) .. " (layer " .. tostring(layer) .. ")")
 				ret[k] = v
 			end
 		end
