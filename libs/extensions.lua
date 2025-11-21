@@ -64,17 +64,24 @@ function table.copy(tbl)
 	return ret
 end
 
-function table.deepcopy(tbl, layer, blacklist)
+function table.deepcopy(tbl, layer, blacklist, path)
 	if not tbl then return {} end
 	layer = layer or 1
 	if layer > 25 then
 		print("deepcopy: maximum depth reached (layer " .. tostring(layer) .. ")")
 		return nil
 	end
+	path = path or "~"
     local ret = {}
     for k, v in pairs(tbl) do
 		if not table.find(blacklist or {}, k) then
-			ret[k] = type(v) == 'table' and table.deepcopy(v, layer + 1, blacklist) or v
+			if type(v) == 'table' then
+				print("deepcopy: subdeepcopying " .. path .. "/" .. tostring(k) .. " (layer " .. tostring(layer) .. ")")
+				ret[k] = table.deepcopy(v, layer + 1, blacklist, path .. "/" .. tostring(k))
+			else
+				print("deepcopy: copying original value at " .. path .. "/" .. tostring(k) .. " (layer " .. tostring(layer) .. ")")
+				ret[k] = v
+			end
 		end
     end
     local mt = getmetatable(tbl)
