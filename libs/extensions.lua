@@ -76,7 +76,9 @@ function table.deepcopy(tbl, layer, blacklist, path)
     for k, v in pairs(tbl) do
 		if not table.find(blacklist or {}, k) then
 			if type(v) == 'table' then
-				print("deepcopy: subdeepcopying " .. path .. "/" .. tostring(k) .. " (layer " .. tostring(layer) .. ")")
+				if layer > 20 then
+					print("deepcopy: subdeepcopying " .. path .. "/" .. tostring(k) .. " (layer " .. tostring(layer) .. ")")
+				end
 				ret[k] = table.deepcopy(v, layer + 1, blacklist, path .. "/" .. tostring(k))
 			else
 				ret[k] = v
