@@ -482,6 +482,18 @@ function GuildThreadChannel:canUnarchive(member)
 	return self:canSend(member) and (not self.locked or self:canManage(member))
 end
 
+--[=[
+@m setRateLimit
+@t http
+@p limit number
+@r boolean
+@d Sets the thread's slowmode rate limit in seconds.
+Passing 0 or `nil` will clear the limit.
+]=]
+function GuildThreadChannel:setRateLimit(limit)
+	return self:_modify({rate_limit_per_user = limit or json.null})
+end
+
 --[=[@p memberCount number Approximately how many member is currently joined. Stops counting at 50.]=]
 function get.memberCount(self)
 	return self._member_count
