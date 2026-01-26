@@ -328,7 +328,7 @@ function string.sub(s, i, j)
     local end_byte = utf8.offset(s, j + 1)
 
     if start_byte then
-        return s:sub(start_byte, (end_byte and end_byte - 1) or #s)
+        return sub(s, start_byte, (end_byte and end_byte - 1) or #s)
     end
 
     return ""
