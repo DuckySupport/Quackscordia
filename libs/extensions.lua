@@ -442,7 +442,7 @@ end
 
 function string.truncate(str, len)
     if str:len() >= len then
-        return str:sub(1,len - 3) .. "..."
+        return string.usub(str, 1,len - 3) .. "..."
     else
         return str
     end
