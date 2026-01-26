@@ -307,7 +307,7 @@ end
 
 local string = {}
 
-function string.sub(s, i, j)
+function string.usub(s, i, j)
     i = i or 1
     j = j or -1
 
