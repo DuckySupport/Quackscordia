@@ -307,6 +307,10 @@ end
 
 local string = {}
 
+function string.ulen(s)
+	return utf8.len(s)
+end
+
 function string.usub(s, i, j)
     i = i or 1
     j = j or -1
