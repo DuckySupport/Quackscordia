@@ -307,26 +307,31 @@ end
 
 local string = {}
 
-function string.split(str, delim)
-	local ret = {}
-	if not str then
-		return ret
-	end
-	if not delim or delim == '' then
-		for c in gmatch(str, '.') do
-			insert(ret, c)
-		end
-		return ret
-	end
-	local n = 1
-	while true do
-		local i, j = find(str, delim, n)
-		if not i then break end
-		insert(ret, sub(str, n, i - 1))
-		n = j + 1
-	end
-	insert(ret, sub(str, n))
-	return ret
+function string.sub(s, i, j)
+    i = i or 1
+    j = j or -1
+
+    local len = utf8.len(s)
+    if not len then return nil end
+
+    if i < 0 then i = len + i + 1 end
+    if j < 0 then j = len + j + 1 end
+
+    i = math.max(i, 1)
+    j = math.min(j, len)
+
+    if i > j then
+        return ""
+    end
+
+    local start_byte = utf8.offset(s, i)
+    local end_byte = utf8.offset(s, j + 1)
+
+    if start_byte then
+        return s:sub(start_byte, (end_byte and end_byte - 1) or #s)
+    end
+
+    return ""
 end
 
 function string.split(str, delim)
