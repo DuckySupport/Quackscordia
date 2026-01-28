@@ -37,6 +37,8 @@ end
 
 function WebSocket:connect(url, path)
 
+	self:info('Connecting to %s', url)
+
 	local success, res, read, write = pcall(connect, url, path)
 
 	if success then
