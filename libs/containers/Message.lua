@@ -177,6 +177,9 @@ function Message:_setOldContent(d)
 end
 
 function Message:_modify(payload, files)
+	payload.embeds = payload.embeds or (payload.embed and {payload.embed}) or nil
+	payload.embed = nil
+	
 	local data, err = self.client._api:editMessage(self._parent._id, self._id, payload, files)
 	if data then
 		self:_setOldContent(data)
