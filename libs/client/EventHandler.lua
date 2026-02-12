@@ -273,10 +273,13 @@ function EventHandler.GUILD_UPDATE(d, client)
 	return client:emit('guildUpdate', guild)
 end
 
-function EventHandler.GUILD_DELETE(d, client)
+function EventHandler.GUILD_DELETE(d, client, shard)
 	if d.unavailable then
 		local guild = client._guilds:_insert(d)
 		return client:emit('guildUnavailable', guild)
+	elseif shard and shard._loading and shard._loading.guilds and shard._loading.guilds[d.id] then
+		shard._loading.guilds[d.id] = nil
+		return checkReady(shard)
 	else
 		local guild = client._guilds:_remove(d)
 		return client:emit('guildDelete', guild)
