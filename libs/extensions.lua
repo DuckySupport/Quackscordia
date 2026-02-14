@@ -429,10 +429,14 @@ function string.random(len, mn, mx)
 end
 
 function string.capitalize(str)
+	if type(str) ~= "string" then return "capitalize got invalid str" end
+
 	return str:sub(1,1):upper() .. str:sub(2):lower()
 end
 
 function string.removeWhitespace(str)
+	if type(str) ~= "string" then return "removeWhitespace got invalid str" end
+
 	local ret = "" .. str
 	repeat
 		ret = ret:gsub("  ", " ")
@@ -441,6 +445,8 @@ function string.removeWhitespace(str)
 end
 
 function string.truncate(str, len)
+	if type(str) ~= "string" then return ("truncate got invalid str"):sub(0, len) end
+
     if str:len() >= len then
         return string.usub(str, 1,len - 3) .. "..."
     else
