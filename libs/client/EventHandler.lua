@@ -1,5 +1,6 @@
 local enums = require('enums')
 local json = require('json')
+local date = require("./../utils/Date")
 
 local channelType = assert(enums.channelType)
 local insert = table.insert
@@ -8,7 +9,7 @@ local null = json.null
 local THREAD_TYPES = require('constants').THREAD_TYPES
 
 local function warning(client, object, id, event)
-	return client:warning('Uncached %s (%s) on %s', object, id, event)
+	-- return client:warning('Uncached %s (%s) on %s', object, id, event)
 end
 
 local function checkReady(shard)
@@ -367,23 +368,36 @@ function EventHandler.GUILD_ROLE_DELETE(d, client) -- role object not provided
 end
 
 function EventHandler.MESSAGE_CREATE(d, client)
-	local channel = getChannel(client, d)
-	if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_CREATE') end
-	if THREAD_TYPES[channel._type] then
-		channel._message_count = channel._message_count + 1
-		channel._total_message_sent = channel._total_message_sent + 1
-	end
+	d.createdAt = date.fromISO(d.timestamp):toSeconds()
 
-    local split = string.split(d.content or "", " && ")
+	local split = string.split(d.content or "", " && ")
     for i, content in pairs(split) do
         d.content = content
-		local new = channel._messages:_insert(d)
-        client:emit('messageCreate', new)
+        client:emit('messageCreate', d)
 
         if i >= 3 then
             break
         end
     end
+
+	--- // OLD CODE // ---
+	-- local channel = getChannel(client, d)
+	-- if not channel then return warning(client, 'TextChannel', d.channel_id, 'MESSAGE_CREATE') end
+	-- if THREAD_TYPES[channel._type] then
+	-- 	channel._message_count = channel._message_count + 1
+	-- 	channel._total_message_sent = channel._total_message_sent + 1
+	-- end
+
+    -- local split = string.split(d.content or "", " && ")
+    -- for i, content in pairs(split) do
+    --     d.content = content
+	-- 	local new = channel._messages:_insert(d)
+    --     client:emit('messageCreate', new)
+
+    --     if i >= 3 then
+    --         break
+    --     end
+    -- end
 end
 
 function EventHandler.MESSAGE_UPDATE(d, client) -- may not contain the whole message
