@@ -30,6 +30,7 @@ local Webhook = require('containers/Webhook')
 local Relationship = require('containers/Relationship')
 
 local Cache = require('iterables/Cache')
+local LimitedCache = require('iterables/LimitedCache')
 local WeakCache = require('iterables/WeakCache')
 local Emitter = require('utils/Emitter')
 local Logger = require('utils/Logger')
@@ -71,7 +72,9 @@ local defaultOptions = {
 	dateTime = '%F %T',
 	syncGuilds = false,
 	gatewayIntents = 3243773, -- all non-privileged intents
-	suppressUnhandledGatewayEvents = false
+	suppressUnhandledGatewayEvents = false,
+	lazyLoadGuilds = false,
+	maxCachedGuilds = 1000,
 }
 
 local function parseOptions(customOptions)
@@ -111,7 +114,11 @@ function Client:__init(options)
 	self._api = API(self)
 	self._mutex = Mutex()
 	self._users = Cache({}, User, self)
-	self._guilds = Cache({}, Guild, self)
+	if options.lazyLoadGuilds then
+		self._guilds = LimitedCache(options.maxCachedGuilds, Guild, self)
+	else
+		self._guilds = Cache({}, Guild, self)
+	end
 	self._group_channels = Cache({}, GroupChannel, self)
 	self._private_channels = Cache({}, PrivateChannel, self)
 	self._relationships = Cache({}, Relationship, self)
@@ -122,6 +129,12 @@ function Client:__init(options)
 	self._channel_map = {}
 	self._events = require('client/EventHandler')
 	self._intents = options.gatewayIntents
+	self._totalGuildCount = 0
+end
+
+--[=[@p totalGuildCount number The total number of guilds the client is currently in.]=]
+function get.totalGuildCount(self)
+	return self._totalGuildCount
 end
 
 for name, level in pairs(logLevel) do
@@ -525,16 +538,33 @@ end
 
 --[=[
 @m getGuild
-@t mem
+@t mem/http
 @p id Guild-ID-Resolvable
 @r Guild
-@d Gets a guild object by ID. The current user must be in the guild and the client
-must be running the appropriate shard that serves this guild. This method never
-makes an HTTP request to obtain a guild.
+@d Gets a guild object by ID. If lazy loading is enabled and the guild is not
+cached, an HTTP request will be made to fetch it.
 ]=]
 function Client:getGuild(id)
 	id = Resolver.guildId(id)
-	return self._guilds:get(id)
+	local guild = self._guilds:get(id)
+
+	if guild then
+		return guild
+	end
+
+	if self._options.lazyLoadGuilds then
+		self:debug("Guild %s not in cache, fetching from API...", id)
+		local data, err = self._api:getGuild(id)
+		if not data then
+			self:warning("Failed to fetch guild %s from API: %s", id, err)
+			return nil, err
+		end
+
+		guild = self._guilds:_insert(data)
+		return guild
+	else
+		return nil
+	end
 end
 
 --[=[

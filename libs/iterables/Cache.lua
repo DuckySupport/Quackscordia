@@ -89,7 +89,7 @@ function Cache:_remove(data)
 	elseif self._deleted[k] then
 		return self._deleted[k]
 	else
-		return self._constructor(data, self._parent)
+		return nil -- Return nil if not found in cache or deleted list
 	end
 end
 

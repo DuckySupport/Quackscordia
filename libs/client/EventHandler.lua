@@ -78,29 +78,40 @@ function EventHandler.READY(d, client, shard)
 		end
 	end
 
-	local loading = shard._loading
+		client._totalGuildCount = #d.guilds
 
-	if d.user.bot then
-		for _, guild in ipairs(d.guilds) do
-			guilds:_insert(guild)
-			loading.guilds[guild.id] = true
-		end
-	else
-		if client._options.syncGuilds then
-			local ids = {}
-			for _, guild in ipairs(d.guilds) do
-				guilds:_insert(guild)
-				if not guild.unavailable then
-					loading.syncs[guild.id] = true
-					insert(ids, guild.id)
+		local loading = shard._loading
+
+		-- only cache if lazyLoadGuilds is off
+		if not client._options.lazyLoadGuilds then
+			if d.user.bot then
+				for _, guild in ipairs(d.guilds) do
+					guilds:_insert(guild)
+					loading.guilds[guild.id] = true
+				end
+			else
+				if client._options.syncGuilds then
+					local ids = {}
+					for _, guild in ipairs(d.guilds) do
+						guilds:_insert(guild)
+						if not guild.unavailable then
+							loading.syncs[guild.id] = true
+							insert(ids, guild.id)
+						end
+					end
+					shard:syncGuilds(ids)
+				else
+					guilds:_load(d.guilds)
 				end
 			end
-			shard:syncGuilds(ids)
 		else
-			guilds:_load(d.guilds)
+			-- If lazyLoadGuilds is on, just say it's all done
+			if loading.guilds then
+				for k in pairs(loading.guilds) do
+					loading.guilds[k] = nil
+				end
+			end
 		end
-	end
-
 	relationships:_load(d.relationships)
 
 	for _, presence in ipairs(d.presences) do
@@ -251,20 +262,26 @@ function EventHandler.GUILD_CREATE(d, client, shard)
 	if client._options.syncGuilds and not d.unavailable and not client._user._bot then
 		shard:syncGuilds({d.id})
 	end
+
 	local guild = client._guilds:get(d.id)
+
 	if guild then
 		if guild._unavailable and not d.unavailable then
 			guild:_load(d)
 			guild:_makeAvailable(d)
 			client:emit('guildAvailable', guild)
 		end
-		if shard._loading then
-			shard._loading.guilds[d.id] = nil
-			return checkReady(shard)
-		end
 	else
-		guild = client._guilds:_insert(d)
-		return client:emit('guildCreate', guild)
+		if not client._options.lazyLoadGuilds then
+			guild = client._guilds:_insert(d)
+			client:emit('guildCreate', guild)
+		end
+		client._totalGuildCount = client._totalGuildCount + 1
+	end
+
+	if shard._loading and shard._loading.guilds and shard._loading.guilds[d.id] then
+		shard._loading.guilds[d.id] = nil
+		return checkReady(shard)
 	end
 end
 
@@ -282,7 +299,11 @@ function EventHandler.GUILD_DELETE(d, client, shard)
 		return checkReady(shard)
 	else
 		local guild = client._guilds:_remove(d)
-		return client:emit('guildDelete', guild)
+		if guild then
+			client._totalGuildCount = client._totalGuildCount - 1
+			return client:emit('guildDelete', guild)
+		end
+		-- warning: won't do anything yet if guild wasn't cached
 	end
 end
 
