@@ -198,6 +198,15 @@ function Shard:heartbeat()
 	if self._heartbeat_acknowledged == false then
 		self:warning('Connection zombied, reconnecting...')
 		self._client:emit('shardZombied', self._id)
+		local client = self._client
+		local now = os.time()
+		local last = client._last_zombie_time or 0
+		client._last_zombie_time = now
+		if (now - last) < 30 then
+			local delay = random(1000, 3000)
+			self:info('Staggering zombie reconnect by %i ms (concurrent zombie detected)', delay)
+			sleep(delay)
+		end
 		return self:disconnect(true)
 	end
 	
