@@ -154,7 +154,7 @@ function Shard:handlePayload(payload)
 
 	elseif op == HEARTBEAT_ACK then
 
-		self._heartbeat_acknowledged = true
+		-- self._heartbeat_acknowledged = true
 		client:emit('heartbeatAcknowledged', self._id, self._sw.milliseconds)
 
 	elseif op then
@@ -176,7 +176,7 @@ function Shard:startHeartbeat(interval)
 	if self._heartbeat then
 		clearInterval(self._heartbeat)
 	end
-	self._heartbeat_acknowledged = nil
+	-- self._heartbeat_acknowledged = nil
 	self._heartbeat = setInterval(interval, loop, self)
 end
 
@@ -195,22 +195,22 @@ function Shard:identifyWait()
 end
 
 function Shard:heartbeat()
-	if self._heartbeat_acknowledged == false then
-		self:warning('Connection zombied, reconnecting...')
-		self._client:emit('shardZombied', self._id)
-		local client = self._client
-		local now = os.time()
-		local last = client._last_zombie_time or 0
-		client._last_zombie_time = now
-		if (now - last) < 30 then
-			local delay = random(1000, 3000)
-			self:info('Staggering zombie reconnect by %i ms (concurrent zombie detected)', delay)
-			sleep(delay)
-		end
-		return self:disconnect(true)
-	end
+	-- if self._heartbeat_acknowledged == false then
+	-- 	self:warning('Connection zombied, reconnecting...')
+	-- 	self._client:emit('shardZombied', self._id)
+	-- 	local client = self._client
+	-- 	local now = os.time()
+	-- 	local last = client._last_zombie_time or 0
+	-- 	client._last_zombie_time = now
+	-- 	if (now - last) < 30 then
+	-- 		local delay = random(1000, 3000)
+	-- 		self:info('Staggering zombie reconnect by %i ms (concurrent zombie detected)', delay)
+	-- 		sleep(delay)
+	-- 	end
+	-- 	return self:disconnect(true)
+	-- end
 	
-	self._heartbeat_acknowledged = false
+	-- self._heartbeat_acknowledged = false
 	self._sw:reset()
 	local success, err = self:_send(HEARTBEAT, self._seq or json.null)
 	if not success then
